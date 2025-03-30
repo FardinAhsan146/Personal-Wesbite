@@ -65,11 +65,19 @@ function populateAbout(aboutData) {
             const slide = document.createElement('div');
             slide.className = 'slide';
             
-            // Create image
+            // Create image with error handling
             const img = document.createElement('img');
             img.src = photo.image;
             img.alt = photo.title;
             img.loading = 'lazy';
+            
+            // Add error handling for images
+            img.onerror = function() {
+                console.error(`Failed to load image: ${photo.image}`);
+                // Set a fallback image or placeholder
+                this.src = 'https://via.placeholder.com/400x400?text=Image+Not+Found';
+                this.alt = 'Image not found';
+            };
             
             // Create caption container
             const captionContainer = document.createElement('div');
@@ -197,20 +205,29 @@ function populateProjects(projectsData) {
                 projectInfo.appendChild(useCaseContainer);
             }
             
-            // Add project info to content
-            projectContent.appendChild(projectInfo);
-            
-            // Create project demo
+            // Create project demo with GIF
             const projectDemo = document.createElement('div');
             projectDemo.className = 'project-demo';
             
+            // Use img element for all images including GIFs
             const img = document.createElement('img');
             img.src = project.image;
             img.alt = project.title;
             img.className = 'hover-scale';
             img.loading = 'lazy';
             
+            // Add error handling for project images
+            img.onerror = function() {
+                console.error(`Failed to load project image: ${project.image}`);
+                // Set a fallback image or placeholder
+                this.src = 'https://via.placeholder.com/800x400?text=Project+Image+Not+Found';
+                this.alt = 'Project image not found';
+            };
+            
             projectDemo.appendChild(img);
+            
+            // Add project info and demo to content in the correct order
+            projectContent.appendChild(projectInfo);
             projectContent.appendChild(projectDemo);
             
             // Add content to card
@@ -312,9 +329,73 @@ function populateInstagram(instagramData) {
         description.innerHTML = `Some snapshots from my life and travels. Follow me on <a href="${instagramData.url}" target="_blank">Instagram</a> for more.`;
     }
     
-    const instagramLink = document.querySelector('#instagram-container a');
-    if (instagramLink) {
+    const instagramContainer = document.getElementById('instagram-container');
+    if (instagramContainer) {
+        // Clear existing content
+        instagramContainer.innerHTML = '';
+        
+        // Create a grid for Instagram images
+        const imageGrid = document.createElement('div');
+        imageGrid.className = 'instagram-grid';
+        imageGrid.style.display = 'grid';
+        imageGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(250px, 1fr))';
+        imageGrid.style.gap = '1rem';
+        imageGrid.style.marginBottom = '2rem';
+        
+        // Add Instagram images from the images/instagram directory
+        const instagramImages = [
+            'images/instagram/download.jpg',
+            'images/instagram/download (1).jpg',
+            'images/instagram/download (2).jpg'
+        ];
+        
+        instagramImages.forEach(imagePath => {
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'instagram-image-container';
+            imageContainer.style.borderRadius = 'var(--radius-md)';
+            imageContainer.style.overflow = 'hidden';
+            imageContainer.style.boxShadow = 'var(--card-shadow)';
+            imageContainer.style.transition = 'transform 0.3s ease';
+            imageContainer.style.maxWidth = '100%';
+            imageContainer.style.height = 'auto';
+            
+            // Add hover effect
+            imageContainer.addEventListener('mouseenter', () => {
+                imageContainer.style.transform = 'scale(1.05)';
+            });
+            
+            imageContainer.addEventListener('mouseleave', () => {
+                imageContainer.style.transform = 'scale(1)';
+            });
+            
+            const img = document.createElement('img');
+            img.src = imagePath;
+            img.alt = 'Instagram photo';
+            img.style.width = '100%';
+            img.style.height = '250px';
+            img.style.objectFit = 'cover';
+            img.style.display = 'block';
+            
+            // Add error handling for Instagram images
+            img.onerror = function() {
+                console.error(`Failed to load Instagram image: ${imagePath}`);
+                this.src = 'https://via.placeholder.com/250x250?text=Instagram+Image';
+                this.alt = 'Instagram image not found';
+            };
+            
+            imageContainer.appendChild(img);
+            imageGrid.appendChild(imageContainer);
+        });
+        
+        instagramContainer.appendChild(imageGrid);
+        
+        // Add the "View on Instagram" button
+        const instagramLink = document.createElement('a');
         instagramLink.href = instagramData.url;
+        instagramLink.className = 'btn btn-primary';
+        instagramLink.target = '_blank';
+        instagramLink.innerHTML = '<i class="fab fa-instagram"></i> View on Instagram';
+        instagramContainer.appendChild(instagramLink);
     }
 }
 
@@ -605,11 +686,104 @@ function revealOnScroll() {
 window.addEventListener('scroll', throttledReveal, { passive: true });
 window.addEventListener('load', revealOnScroll);
 
+// Function to preload and verify all images
+function preloadAndVerifyImages() {
+    console.log("Preloading and verifying images...");
+    
+    // Create a status element to show image loading status
+    const statusElement = document.createElement('div');
+    statusElement.style.position = 'fixed';
+    statusElement.style.bottom = '10px';
+    statusElement.style.right = '10px';
+    statusElement.style.backgroundColor = 'rgba(0,0,0,0.7)';
+    statusElement.style.color = 'white';
+    statusElement.style.padding = '10px';
+    statusElement.style.borderRadius = '5px';
+    statusElement.style.zIndex = '1000';
+    statusElement.style.fontSize = '12px';
+    statusElement.style.maxWidth = '300px';
+    statusElement.style.maxHeight = '200px';
+    statusElement.style.overflow = 'auto';
+    statusElement.innerHTML = '<h4>Image Loading Status:</h4>';
+    document.body.appendChild(statusElement);
+    
+    let totalImages = 0;
+    let loadedImages = 0;
+    let failedImages = 0;
+    
+    function updateStatus(message, success) {
+        const item = document.createElement('div');
+        item.style.marginBottom = '5px';
+        item.style.color = success ? '#4ade80' : '#f87171';
+        item.textContent = message;
+        statusElement.appendChild(item);
+        
+        if (success) {
+            loadedImages++;
+        } else {
+            failedImages++;
+        }
+        
+        const summary = document.createElement('div');
+        summary.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+        summary.style.marginTop = '10px';
+        summary.style.paddingTop = '5px';
+        summary.innerHTML = `Loaded: ${loadedImages}/${totalImages}, Failed: ${failedImages}`;
+        
+        // Replace the last element if it's a summary
+        const lastElement = statusElement.lastElementChild;
+        if (lastElement && lastElement.style.borderTop) {
+            statusElement.removeChild(lastElement);
+        }
+        statusElement.appendChild(summary);
+    }
+    
+    // Check about section images
+    if (siteData.about && siteData.about.photos) {
+        siteData.about.photos.forEach(photo => {
+            totalImages++;
+            const img = new Image();
+            img.onload = () => updateStatus(`✓ ${photo.image}`, true);
+            img.onerror = () => updateStatus(`✗ ${photo.image}`, false);
+            img.src = photo.image;
+        });
+    }
+    
+    // Check project images
+    if (siteData.projects && siteData.projects.items) {
+        siteData.projects.items.forEach(project => {
+            totalImages++;
+            const img = new Image();
+            img.onload = () => updateStatus(`✓ ${project.image}`, true);
+            img.onerror = () => updateStatus(`✗ ${project.image}`, false);
+            img.src = project.image;
+        });
+    }
+    
+    // Add a close button to the status element
+    setTimeout(() => {
+        const closeButton = document.createElement('button');
+        closeButton.textContent = 'Close';
+        closeButton.style.marginTop = '10px';
+        closeButton.style.padding = '5px 10px';
+        closeButton.style.backgroundColor = '#3b82f6';
+        closeButton.style.border = 'none';
+        closeButton.style.borderRadius = '3px';
+        closeButton.style.color = 'white';
+        closeButton.style.cursor = 'pointer';
+        closeButton.onclick = () => document.body.removeChild(statusElement);
+        statusElement.appendChild(closeButton);
+    }, 3000);
+}
+
 // Load content when the DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Theme toggle functionality
     const themeToggle = document.getElementById('themeToggle');
     const body = document.body;
+    
+    // Preload and verify all images
+    preloadAndVerifyImages();
     
     // Check for saved theme preference
     if (localStorage.getItem('darkMode') === 'true') {
