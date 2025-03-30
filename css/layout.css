@@ -1,0 +1,91 @@
+/* Layout Styles */
+
+/* Container */
+.container {
+    max-width: var(--container-width);
+    margin: 0 auto;
+    padding: 0 2rem;
+    width: 100%;
+}
+
+/* Full-width section with centered content */
+.full-width-section {
+    width: 100%;
+    padding: 5rem 0;
+    position: relative;
+}
+
+.full-width-section .container {
+    position: relative;
+    z-index: 2;
+}
+
+/* Section with background color */
+.bg-section {
+    background-color: var(--gray-light);
+    padding: 5rem 0;
+}
+
+/* Section with gradient background */
+.gradient-section {
+    background: var(--gradient);
+    color: white;
+    padding: 5rem 0;
+}
+
+/* Grid layouts */
+.grid {
+    display: grid;
+    gap: 2rem;
+}
+
+.grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+/* Flex layouts */
+.flex {
+    display: flex;
+}
+
+.flex-column {
+    flex-direction: column;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.gap-1 {
+    gap: 0.5rem;
+}
+
+.gap-2 {
+    gap: 1rem;
+}
+
+.gap-3 {
+    gap: 1.5rem;
+}
+
+.gap-4 {
+    gap: 2rem;
+}
+
+/* Responsive adjustments will be in responsive.css */

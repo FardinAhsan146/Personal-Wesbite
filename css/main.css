@@ -1,0 +1,24 @@
+/* Main CSS File - Imports all modular CSS files */
+
+/* Import Variables */
+@import 'variables.css';
+
+/* Import Base Styles */
+@import 'base.css';
+
+/* Import Layout Styles */
+@import 'layout.css';
+
+/* Import Component Styles */
+@import 'components.css';
+
+/* Import Section Styles */
+@import 'sections.css';
+
+/* Import Animation Styles */
+@import 'animations.css';
+
+/* Import Responsive Styles */
+@import 'responsive.css';
+
+/* Additional custom styles can be added here */
