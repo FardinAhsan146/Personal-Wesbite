@@ -14,8 +14,6 @@ navigation:
     url: "#projects"
   - name: Writing
     url: "#writing"
-  - name: Instagram
-    url: "#instagram"
   - name: Contact
     url: "#contact"
 
@@ -99,12 +97,6 @@ writing:
       author: by Fardin Ahsan
       description: It's yet to hit all of us that LLM's will hit, and they are going to hit hard.
       url: https://fardinahsan.substack.com/p/you-know-shits-about-to-hit-the-fan
-
-# Instagram Section
-instagram:
-  title: Instagram
-  description: Some snapshots from my life and travels. Follow me on Instagram for more.
-  url: https://www.instagram.com/fardinahsan_kbw123/
 
 # Contact Section
 contact:

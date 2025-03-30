@@ -15,8 +15,7 @@ function populateContent() {
     // Populate writing section
     populateWriting(siteData.writing);
     
-    // Populate Instagram section
-    populateInstagram(siteData.instagram);
+    // Instagram section removed as requested
     
     // Populate contact section
     populateContact(siteData.contact);
@@ -318,86 +317,7 @@ function populateWriting(writingData) {
     }
 }
 
-// Populate Instagram section
-function populateInstagram(instagramData) {
-    if (!instagramData) return;
-    
-    document.querySelector('#instagram .section-title').textContent = instagramData.title;
-    
-    const description = document.querySelector('#instagram .section-description');
-    if (description) {
-        description.innerHTML = `Some snapshots from my life and travels. Follow me on <a href="${instagramData.url}" target="_blank">Instagram</a> for more.`;
-    }
-    
-    const instagramContainer = document.getElementById('instagram-container');
-    if (instagramContainer) {
-        // Clear existing content
-        instagramContainer.innerHTML = '';
-        
-        // Create a grid for Instagram images
-        const imageGrid = document.createElement('div');
-        imageGrid.className = 'instagram-grid';
-        imageGrid.style.display = 'grid';
-        imageGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(250px, 1fr))';
-        imageGrid.style.gap = '1rem';
-        imageGrid.style.marginBottom = '2rem';
-        
-        // Add Instagram images from the images/instagram directory
-        const instagramImages = [
-            'images/instagram/download.jpg',
-            'images/instagram/download (1).jpg',
-            'images/instagram/download (2).jpg'
-        ];
-        
-        instagramImages.forEach(imagePath => {
-            const imageContainer = document.createElement('div');
-            imageContainer.className = 'instagram-image-container';
-            imageContainer.style.borderRadius = 'var(--radius-md)';
-            imageContainer.style.overflow = 'hidden';
-            imageContainer.style.boxShadow = 'var(--card-shadow)';
-            imageContainer.style.transition = 'transform 0.3s ease';
-            imageContainer.style.maxWidth = '100%';
-            imageContainer.style.height = 'auto';
-            
-            // Add hover effect
-            imageContainer.addEventListener('mouseenter', () => {
-                imageContainer.style.transform = 'scale(1.05)';
-            });
-            
-            imageContainer.addEventListener('mouseleave', () => {
-                imageContainer.style.transform = 'scale(1)';
-            });
-            
-            const img = document.createElement('img');
-            img.src = imagePath;
-            img.alt = 'Instagram photo';
-            img.style.width = '100%';
-            img.style.height = '250px';
-            img.style.objectFit = 'cover';
-            img.style.display = 'block';
-            
-            // Add error handling for Instagram images
-            img.onerror = function() {
-                console.error(`Failed to load Instagram image: ${imagePath}`);
-                this.src = 'https://via.placeholder.com/250x250?text=Instagram+Image';
-                this.alt = 'Instagram image not found';
-            };
-            
-            imageContainer.appendChild(img);
-            imageGrid.appendChild(imageContainer);
-        });
-        
-        instagramContainer.appendChild(imageGrid);
-        
-        // Add the "View on Instagram" button
-        const instagramLink = document.createElement('a');
-        instagramLink.href = instagramData.url;
-        instagramLink.className = 'btn btn-primary';
-        instagramLink.target = '_blank';
-        instagramLink.innerHTML = '<i class="fab fa-instagram"></i> View on Instagram';
-        instagramContainer.appendChild(instagramLink);
-    }
-}
+// Instagram section function removed as requested
 
 // Populate contact section
 function populateContact(contactData) {

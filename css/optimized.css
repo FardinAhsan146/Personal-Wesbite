@@ -1039,7 +1039,7 @@ pre, code {
     overflow: hidden;
     border-radius: var(--radius-md);
     border: var(--retro-border);
-    padding-right: 20px; /* Added padding on the right side to create spacing */
+    padding: 0 20px; /* Added padding on both sides to create spacing */
 }
 
 .project-demo img {
