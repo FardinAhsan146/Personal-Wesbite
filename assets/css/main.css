@@ -18,6 +18,12 @@
 /* Import Animation Styles */
 @import 'animations.css';
 
+/* Import Instagram Slider Styles */
+@import 'instagram-slider.css';
+
+/* Import Custom Improvements */
+@import 'custom-improvements.css';
+
 /* Import Responsive Styles */
 @import 'responsive.css';
 

@@ -18,15 +18,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     
     <!-- Main stylesheet -->
-    <link rel="stylesheet" href="css/optimized.css">
+    <link rel="stylesheet" href="assets/css/main.css">
     
-    <!-- Theme toggle script (inline for performance) -->
-    <script>
-        // Check for saved theme preference and apply it immediately to prevent flash
-        if (localStorage.getItem('darkMode') === 'true') {
-            document.documentElement.classList.add('dark-mode');
-        }
-    </script>
+    <!-- Theme toggle script removed -->
 </head>
 <body>
     <!-- Retro cursor trail container -->
@@ -115,7 +109,7 @@ for i in range(1,16):
                 <h2 class="section-title reveal">Hobby Writing</h2>
                 <p class="section-description reveal">I like writing non-academic non-fiction texts on my Substack.</p>
                 
-                <p class="lorem-text mb-4 reveal">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris. Vivamus hendrerit arcu sed erat molestie vehicula. Sed auctor neque eu tellus rhoncus ut eleifend nibh porttitor. Ut in nulla enim. Phasellus molestie magna non est bibendum non venenatis nisl tempor.</p>
+                <p class="lorem-text reveal">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris. Vivamus hendrerit arcu sed erat molestie vehicula. Sed auctor neque eu tellus rhoncus ut eleifend nibh porttitor. Ut in nulla enim. Phasellus molestie magna non est bibendum non venenatis nisl tempor.</p>
                 
                 <div class="substack-embeds reveal">
                     <!-- Substack posts will be populated from YAML -->
@@ -148,7 +142,7 @@ for i in range(1,16):
     </footer>
     
     <!-- Site data and data loader scripts -->
-    <script src="js/site-data.js"></script>
-    <script src="js/data-loader.js"></script>
+    <script src="assets/js/site-data.js"></script>
+    <script src="assets/js/data-loader.js"></script>
 </body>
 </html>

@@ -13,7 +13,6 @@ const siteData = {
         { name: "Tech Stack", url: "#tech-stack" },
         { name: "Projects", url: "#projects" },
         { name: "Writing", url: "#writing" },
-        { name: "Instagram", url: "#instagram" },
         { name: "Contact", url: "#contact" }
     ],
 
@@ -23,17 +22,17 @@ const siteData = {
         description: "I'm a self-taught data scientist who is passionate about building better predictive models of The World. I spend a significant portion of my free time reading up on Statistics and programming pet projects using Python. I also like cycling, building PC's, playing FPS and racing games and travelling.",
         photos: [
             {
-                image: "images/instagram/download.jpg",
+                image: "assets/images/instagram/download.jpg",
                 title: "Mountain View",
                 caption: "Enjoying the breathtaking scenery during my hiking trip"
             },
             {
-                image: "images/instagram/download (1).jpg",
+                image: "assets/images/instagram/download (1).jpg",
                 title: "Winter Exploration",
                 caption: "Exploring the snowy coastline on a crisp winter day"
             },
             {
-                image: "images/instagram/download (2).jpg",
+                image: "assets/images/instagram/download (2).jpg",
                 title: "My JDM Ride",
                 caption: "My pride and joy - a modified Japanese classic"
             }
@@ -72,7 +71,7 @@ const siteData = {
                     "No YouTube API credentials required"
                 ],
                 use_case: "Created to extract restaurant recommendations from a travel YouTuber's videos before a trip to Japan. Using this tool, I've been able to add a bunch of places to my itinerary that would have been difficult to find otherwise.",
-                image: "images/gifs/talk_to_youtuber-Trim-Trimonline-video-cutter.com-ezgif.com-video-to-gif-converter.gif",
+                image: "assets/images/gifs/talk_to_youtuber-Trim-Trimonline-video-cutter.com-ezgif.com-video-to-gif-converter.gif",
                 tags: ["NLP"],
                 github: "https://github.com/FardinAhsan146/Talk-to-youtuber"
             },
@@ -86,7 +85,7 @@ const siteData = {
                     "Persistent vector database for faster future searches"
                 ],
                 use_case: "Perfect when you can't remember a video title, when it's in a non-English language, or when you only remember what the thumbnail looked like. I used it to search a Serbian news channel with over 30,000 videos for content related to horses, just by their thumbnails.",
-                image: "images/gifs/youtube-thumbnail-search.gif",
+                image: "assets/images/gifs/youtube-thumbnail-search.gif",
                 tags: ["Computer Vision"],
                 github: "https://github.com/FardinAhsan146/Youtube-thumbnail-search"
             }
@@ -118,13 +117,6 @@ const siteData = {
                 url: "https://fardinahsan.substack.com/p/you-know-shits-about-to-hit-the-fan"
             }
         ]
-    },
-
-    // Instagram Section
-    instagram: {
-        title: "Instagram",
-        description: "Some snapshots from my life and travels. Follow me on Instagram for more.",
-        url: "https://www.instagram.com/fardinahsan_kbw123/"
     },
 
     // Contact Section

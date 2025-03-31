@@ -93,7 +93,37 @@ nav {
 
 /* About Section */
 #about {
-    padding-top: 2rem;
+    padding-top: 3rem;
+    padding-bottom: 4rem;
+}
+
+.about-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+}
+
+.about-text {
+    padding-right: 2rem;
+}
+
+.about-text p {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .about-content {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .about-text {
+        padding-right: 0;
+        order: 2;
+    }
 }
 
 /* Tech Stack Section */
@@ -256,41 +286,88 @@ nav {
 }
 
 /* Writing Section */
-.writing-card {
+#writing {
+    padding: 5rem 0;
+}
+
+#writing .section-description {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    color: var(--text);
+}
+
+.lorem-text {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--gray);
+    font-style: italic;
+    padding: 1.5rem;
+    background-color: var(--card-bg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.lorem-text::before {
+    content: '"';
+    font-size: 4rem;
+    position: absolute;
+    top: -10px;
+    left: 10px;
+    color: var(--primary);
+    opacity: 0.2;
+}
+
+.substack-embeds {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.substack-post-embed {
     background-color: var(--card-bg);
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--card-shadow);
     transition: transform var(--transition-normal), box-shadow var(--transition-normal);
-    margin-bottom: 2rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
-.writing-card:hover {
+.substack-post-embed:hover {
     transform: translateY(-5px);
     box-shadow: var(--hover-shadow);
 }
 
-.writing-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--gray-light);
-}
-
-.writing-title {
+.substack-post-embed p[lang="en"] {
     font-size: 1.3rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+    line-height: 1.4;
 }
 
-.writing-body {
-    padding: 1.5rem;
+.substack-post-embed p:not([lang="en"]) {
+    flex-grow: 1;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+    color: var(--text);
 }
 
-.writing-footer {
-    padding: 1rem 1.5rem;
-    background-color: var(--gray-light);
+.substack-post-embed .btn {
+    align-self: flex-start;
+    margin-top: auto;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
+}
+
+.substack-post-embed .btn i {
+    font-size: 0.9rem;
 }
 
 /* Instagram Section */

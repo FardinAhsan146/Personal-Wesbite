@@ -43,7 +43,7 @@ function populateNavigation(navItems) {
     });
 }
 
-// Populate about section
+// Populate about section with enhanced Instagram-like photo slider
 function populateAbout(aboutData) {
     if (!aboutData) return;
     
@@ -59,8 +59,16 @@ function populateAbout(aboutData) {
         sliderTrack.innerHTML = '';
         sliderDots.innerHTML = '';
         
+        // Add CSS file for Instagram-like slider if not already added
+        if (!document.querySelector('link[href="assets/css/instagram-slider.css"]')) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'assets/css/instagram-slider.css';
+            document.head.appendChild(link);
+        }
+        
         aboutData.photos.forEach((photo, index) => {
-            // Create slide
+            // Create slide with Instagram-like styling
             const slide = document.createElement('div');
             slide.className = 'slide';
             
@@ -78,7 +86,7 @@ function populateAbout(aboutData) {
                 this.alt = 'Image not found';
             };
             
-            // Create caption container
+            // Create caption container with Instagram-like styling
             const captionContainer = document.createElement('div');
             captionContainer.className = 'caption-container';
             
@@ -97,12 +105,36 @@ function populateAbout(aboutData) {
             slide.appendChild(captionContainer);
             sliderTrack.appendChild(slide);
             
-            // Create dot
+            // Create dot with Instagram-like styling
             const dot = document.createElement('span');
             dot.className = index === 0 ? 'dot active' : 'dot';
             dot.setAttribute('data-index', index);
             sliderDots.appendChild(dot);
         });
+        
+        // Add a touch hint for mobile users
+        const photoSliderContainer = document.querySelector('.photo-slider-container');
+        if (photoSliderContainer && !photoSliderContainer.querySelector('.touch-hint')) {
+            const touchHint = document.createElement('div');
+            touchHint.className = 'touch-hint';
+            touchHint.textContent = 'Swipe to see more';
+            touchHint.style.display = 'none';
+            
+            // Only show on mobile devices
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                touchHint.style.display = 'block';
+                
+                // Hide after 3 seconds
+                setTimeout(() => {
+                    touchHint.style.opacity = '0';
+                    setTimeout(() => {
+                        touchHint.remove();
+                    }, 500);
+                }, 3000);
+            }
+            
+            photoSliderContainer.appendChild(touchHint);
+        }
     }
 }
 
@@ -418,7 +450,7 @@ function initAnimations() {
     initRetroTextEffect();
 }
 
-// Initialize photo slider
+// Initialize photo slider with Instagram-like features
 function initPhotoSlider() {
     const sliderTrack = document.querySelector('.slider-track');
     const slides = document.querySelectorAll('.slide');
@@ -430,6 +462,34 @@ function initPhotoSlider() {
     
     let currentIndex = 0;
     const slideCount = slides.length;
+    const slideInterval = 5000; // 5 seconds per slide
+    
+    // Add Instagram-like progress bars at the top
+    const sliderContainer = document.querySelector('.photo-slider');
+    const progressContainer = document.createElement('div');
+    progressContainer.className = 'slider-progress';
+    
+    // Create progress bars for each slide
+    for (let i = 0; i < slideCount; i++) {
+        const progressBar = document.createElement('div');
+        progressBar.className = 'progress-bar';
+        if (i === 0) progressBar.classList.add('active');
+        
+        const progressBarFill = document.createElement('div');
+        progressBarFill.className = 'progress-bar-fill';
+        
+        progressBar.appendChild(progressBarFill);
+        progressContainer.appendChild(progressBar);
+    }
+    
+    // Add progress bars to the slider
+    sliderContainer.insertBefore(progressContainer, sliderContainer.firstChild);
+    
+    // Add touch indicator
+    const touchIndicator = document.createElement('div');
+    touchIndicator.className = 'touch-indicator';
+    touchIndicator.textContent = 'Swipe to navigate';
+    sliderContainer.appendChild(touchIndicator);
     
     // Set initial position
     updateSlider();
@@ -437,44 +497,35 @@ function initPhotoSlider() {
     // Event listeners for controls
     if (prevArrow) {
         prevArrow.addEventListener('click', () => {
-            currentIndex = (currentIndex - 1 + slideCount) % slideCount;
-            updateSlider();
+            goToSlide((currentIndex - 1 + slideCount) % slideCount);
         });
     }
     
     if (nextArrow) {
         nextArrow.addEventListener('click', () => {
-            currentIndex = (currentIndex + 1) % slideCount;
-            updateSlider();
+            goToSlide((currentIndex + 1) % slideCount);
         });
     }
     
     // Dot navigation
     dots.forEach((dot, index) => {
         dot.addEventListener('click', () => {
-            currentIndex = index;
-            updateSlider();
+            goToSlide(index);
         });
     });
     
-    // Auto-advance slides every 5 seconds
-    let slideInterval = setInterval(() => {
-        currentIndex = (currentIndex + 1) % slideCount;
-        updateSlider();
-    }, 5000);
+    // Auto-advance slides
+    let autoAdvanceTimer = startAutoAdvance();
     
     // Pause auto-advance on hover
-    const sliderContainer = document.querySelector('.photo-slider-container');
-    if (sliderContainer) {
-        sliderContainer.addEventListener('mouseenter', () => {
-            clearInterval(slideInterval);
+    const sliderContainerElement = document.querySelector('.photo-slider-container');
+    if (sliderContainerElement) {
+        sliderContainerElement.addEventListener('mouseenter', () => {
+            clearTimeout(autoAdvanceTimer);
         });
         
-        sliderContainer.addEventListener('mouseleave', () => {
-            slideInterval = setInterval(() => {
-                currentIndex = (currentIndex + 1) % slideCount;
-                updateSlider();
-            }, 5000);
+        sliderContainerElement.addEventListener('mouseleave', () => {
+            autoAdvanceTimer = startAutoAdvance();
         });
     }
     
@@ -484,28 +535,60 @@ function initPhotoSlider() {
     
     sliderTrack.addEventListener('touchstart', (e) => {
         touchStartX = e.changedTouches[0].screenX;
+        clearTimeout(autoAdvanceTimer);
     }, { passive: true });
     
     sliderTrack.addEventListener('touchend', (e) => {
         touchEndX = e.changedTouches[0].screenX;
         handleSwipe();
+        autoAdvanceTimer = startAutoAdvance();
     }, { passive: true });
     
     function handleSwipe() {
         const swipeThreshold = 50;
         if (touchEndX < touchStartX - swipeThreshold) {
             // Swipe left - next slide
-            currentIndex = (currentIndex + 1) % slideCount;
-            updateSlider();
+            goToSlide((currentIndex + 1) % slideCount);
         } else if (touchEndX > touchStartX + swipeThreshold) {
             // Swipe right - previous slide
-            currentIndex = (currentIndex - 1 + slideCount) % slideCount;
-            updateSlider();
+            goToSlide((currentIndex - 1 + slideCount) % slideCount);
         }
     }
     
-    // Update slider position and active dot
+    // Function to start auto-advance timer
+    function startAutoAdvance() {
+        return setTimeout(() => {
+            goToSlide((currentIndex + 1) % slideCount);
+        }, slideInterval);
+    }
+    
+    // Function to go to a specific slide
+    function goToSlide(index) {
+        // Reset progress animation
+        const progressBars = document.querySelectorAll('.progress-bar');
+        progressBars.forEach(bar => {
+            bar.classList.remove('active');
+        });
+        
+        // Update current index
+        currentIndex = index;
+        
+        // Update slider
+        updateSlider();
+        
+        // Start progress animation for current slide
+        if (progressBars[currentIndex]) {
+            progressBars[currentIndex].classList.add('active');
+        }
+        
+        // Clear and restart auto-advance timer
+        clearTimeout(autoAdvanceTimer);
+        autoAdvanceTimer = startAutoAdvance();
+    }
+    
+    // Update slider position and active indicators
     function updateSlider() {
+        // Update slider position
         sliderTrack.style.transform = `translateX(-${currentIndex * 100}%)`;
         
         // Update active dot
