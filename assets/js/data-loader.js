@@ -836,31 +836,10 @@ function preloadAndVerifyImages() {
 
 // Load content when the DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('themeToggle');
-    const body = document.body;
+    // Theme toggle functionality removed
     
     // Image loading status window removed as requested
     // preloadAndVerifyImages();
-    
-    // Check for saved theme preference
-    if (localStorage.getItem('darkMode') === 'true') {
-        body.classList.add('dark-mode');
-        themeToggle.querySelector('i').classList.replace('fa-moon', 'fa-sun');
-    }
-    
-    themeToggle.addEventListener('click', () => {
-        body.classList.toggle('dark-mode');
-        const icon = themeToggle.querySelector('i');
-        
-        if (body.classList.contains('dark-mode')) {
-            icon.classList.replace('fa-moon', 'fa-sun');
-            localStorage.setItem('darkMode', 'true');
-        } else {
-            icon.classList.replace('fa-sun', 'fa-moon');
-            localStorage.setItem('darkMode', 'false');
-        }
-    });
     
     // Smooth scrolling for navigation links with offset
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
