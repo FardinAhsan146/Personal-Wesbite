@@ -66,7 +66,7 @@ const siteData = {
   // Projects Section
   projects: {
     title: "Projects",
-    description: "When I have nothing to do, I might just sit down and write software. No promises! I might or I might not. In either case, all my personal projects can be found in my <a href=\"https://github.com/FardinAhsan146\" target=\"_blank\">Github</a>. Even if I wasn't an AI engineer, I'd have a spot spot for foundation models and vector databases!",
+    description: "When I have nothing to do, I might just sit down and write software. No promises! I might or I might not. In either case, all my personal projects can be found in my <a href=\"https://github.com/FardinAhsan146\" target=\"_blank\">Github</a>. Even if I wasn't an AI engineer, I'd have a soft spot for foundation models and vector databases!",
     items: [
       {
         title: "Talk To Youtuber",
