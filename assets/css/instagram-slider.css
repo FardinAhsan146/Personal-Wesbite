@@ -94,7 +94,6 @@
 .caption-container {
     padding: 16px 20px;
     background-color: var(--card-bg);
-    border-top: 1px solid var(--gray-light);
 }
 
 .caption-container h4 {
