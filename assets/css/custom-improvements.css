@@ -143,19 +143,10 @@
 /* About Section Improvements */
 .about-text p {
     position: relative;
-    padding-left: 20px;
+    /* Removed padding-left that was making space for the vertical line */
 }
 
-.about-text p::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 4px;
-    height: 100%;
-    background: var(--gradient);
-    border-radius: 2px;
-}
+/* Removed the purple vertical line as requested */
 
 /* Instagram-like Slideshow Additional Styles */
 .photo-slider-container {

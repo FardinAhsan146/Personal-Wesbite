@@ -6,8 +6,6 @@ function populateContent() {
     // Populate about section
     populateAbout(siteData.about);
     
-    // Populate tech stack
-    populateTechStack(siteData.tech_stack);
     
     // Populate projects
     populateProjects(siteData.projects);
@@ -86,20 +84,28 @@ function populateAbout(aboutData) {
                 this.alt = 'Image not found';
             };
             
+            // Add location if available (clean, minimalist style)
+            if (photo.location) {
+                const locationContainer = document.createElement('div');
+                locationContainer.className = 'location-container';
+                
+                const locationText = document.createElement('span');
+                locationText.className = 'instagram-location';
+                locationText.textContent = photo.location;
+                
+                locationContainer.appendChild(locationText);
+                slide.appendChild(locationContainer);
+            }
+            
             // Create caption container with Instagram-like styling
             const captionContainer = document.createElement('div');
             captionContainer.className = 'caption-container';
-            
-            // Create caption title
-            const captionTitle = document.createElement('h4');
-            captionTitle.textContent = photo.title;
             
             // Create caption text
             const captionText = document.createElement('p');
             captionText.textContent = photo.caption;
             
             // Append elements
-            captionContainer.appendChild(captionTitle);
             captionContainer.appendChild(captionText);
             slide.appendChild(img);
             slide.appendChild(captionContainer);
@@ -309,11 +315,6 @@ function populateWriting(writingData) {
     document.querySelector('#writing .section-title').textContent = writingData.title;
     document.querySelector('#writing .section-description').textContent = writingData.description;
     
-    const loremText = document.querySelector('.lorem-text');
-    if (loremText && writingData.lorem_ipsum) {
-        loremText.textContent = writingData.lorem_ipsum;
-    }
-    
     const substackEmbedsContainer = document.querySelector('.substack-embeds');
     if (substackEmbedsContainer && writingData.posts) {
         substackEmbedsContainer.innerHTML = '';
@@ -362,13 +363,8 @@ function populateContact(contactData) {
         contactGrid.innerHTML = '';
         
         // Ensure Resume and Email are in the first row, LinkedIn, GitHub and WhatsApp in the second row
-        const orderedItems = [
-            contactData.items.find(item => item.title === "Resume"),
-            contactData.items.find(item => item.title === "Email"),
-            contactData.items.find(item => item.title === "LinkedIn"),
-            contactData.items.find(item => item.title === "GitHub"),
-            contactData.items.find(item => item.title === "WhatsApp")
-        ];
+        // Use all contact items instead of hardcoding specific ones
+        const orderedItems = contactData.items;
         
         orderedItems.forEach(item => {
             if (!item) return; // Skip if item not found
@@ -461,6 +457,56 @@ function initPhotoSlider() {
     
     if (!sliderTrack || slides.length === 0) return;
     
+    // Create more visible navigation arrows if they don't exist
+    const photoSliderContainer = document.querySelector('.photo-slider-container');
+    if (photoSliderContainer && (!prevArrow || !nextArrow)) {
+        // Remove existing arrows if they exist but aren't working
+        const existingArrows = photoSliderContainer.querySelectorAll('.slider-arrow');
+        existingArrows.forEach(arrow => arrow.remove());
+        
+        // Create new navigation arrows
+        const arrowsContainer = document.createElement('div');
+        arrowsContainer.className = 'enhanced-slider-arrows';
+        arrowsContainer.style.position = 'absolute';
+        arrowsContainer.style.top = '50%';
+        arrowsContainer.style.left = '0';
+        arrowsContainer.style.right = '0';
+        arrowsContainer.style.display = 'flex';
+        arrowsContainer.style.justifyContent = 'space-between';
+        arrowsContainer.style.pointerEvents = 'none';
+        arrowsContainer.style.zIndex = '10';
+        
+        const newPrevArrow = document.createElement('button');
+        newPrevArrow.className = 'prev-arrow enhanced-arrow';
+        newPrevArrow.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        newPrevArrow.style.width = '40px';
+        newPrevArrow.style.height = '40px';
+        newPrevArrow.style.borderRadius = '50%';
+        newPrevArrow.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+        newPrevArrow.style.border = 'none';
+        newPrevArrow.style.margin = '0 20px';
+        newPrevArrow.style.cursor = 'pointer';
+        newPrevArrow.style.pointerEvents = 'auto';
+        newPrevArrow.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+        
+        const newNextArrow = document.createElement('button');
+        newNextArrow.className = 'next-arrow enhanced-arrow';
+        newNextArrow.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        newNextArrow.style.width = '40px';
+        newNextArrow.style.height = '40px';
+        newNextArrow.style.borderRadius = '50%';
+        newNextArrow.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+        newNextArrow.style.border = 'none';
+        newNextArrow.style.margin = '0 20px';
+        newNextArrow.style.cursor = 'pointer';
+        newNextArrow.style.pointerEvents = 'auto';
+        newNextArrow.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+        
+        arrowsContainer.appendChild(newPrevArrow);
+        arrowsContainer.appendChild(newNextArrow);
+        photoSliderContainer.appendChild(arrowsContainer);
+    }
+    
     let currentIndex = 0;
     const slideCount = slides.length;
     const slideInterval = 5000; // 5 seconds per slide
@@ -496,17 +542,19 @@ function initPhotoSlider() {
     updateSlider();
     
     // Event listeners for controls
-    if (prevArrow) {
-        prevArrow.addEventListener('click', () => {
+    // Handle all previous arrows including the enhanced ones
+    document.querySelectorAll('.prev-arrow').forEach(arrow => {
+        arrow.addEventListener('click', () => {
             goToSlide((currentIndex - 1 + slideCount) % slideCount);
         });
-    }
+    });
     
-    if (nextArrow) {
-        nextArrow.addEventListener('click', () => {
+    // Handle all next arrows including the enhanced ones
+    document.querySelectorAll('.next-arrow').forEach(arrow => {
+        arrow.addEventListener('click', () => {
             goToSlide((currentIndex + 1) % slideCount);
         });
-    }
+    });
     
     // Dot navigation
     dots.forEach((dot, index) => {
