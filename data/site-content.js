@@ -2,11 +2,23 @@
 // Edit the content below to update your website
 // The format is YAML-like for readability, but it's actually JavaScript
 
+// Calculate age based on birthdate
+const calculateAge = () => {
+  const birthDate = new Date(1997, 11, 1); // December 1, 1997
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  if (today.getMonth() < birthDate.getMonth() || 
+      (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
 const siteData = {
   // Site Information
   site: {
     title: "Fardin Ahsan",
-    tagline: "Self-taught data scientist passionate about building better predictive models of The World",
+    tagline: "Welcome to my website 🌚",
     copyright: "© 2025 Fardin Ahsan. All rights reserved."
   },
 
@@ -21,7 +33,7 @@ const siteData = {
   // About Section
   about: {
     title: "",
-    description: "I'm a self-taught data scientist passionate about understanding the crazy world we live in. ",
+    description: `I'm a ${calculateAge()}-year-old self-taught AI Engineer trying to understand the crazy world we live in.\nWhen I am not working, you might find me at home writing code, at the gym lifting weights, playing badminton; at a random street in Dubai, cycling using a Careem bike (hear me out), or at the gokarting circuit.`,
     photos: [
       {
         image: "assets/images/instagram/download.jpg",
@@ -38,13 +50,13 @@ const siteData = {
       {
         image: "assets/images/instagram/download (2).jpg",
         title: "Iconic mountain view",
-        caption: "You think I wasn't going to pose infront it?",
-        location: "Mount Fuji, Japan"
+        caption: "You think I wasn't going to pose infront Mount Fuji?",
+        location: "Mount Fuji"
       },
       {
         image: "assets/images/instagram/kart.jpeg",
         title: "I love gokarting",
-        caption: "Speed is my second passion.",
+        caption: "Catch me gokarting every chance I get.",
         location: "Dubai Kartdrome Circuit"
       }
     ]
@@ -54,17 +66,18 @@ const siteData = {
   // Projects Section
   projects: {
     title: "Projects",
+    description: "When I have nothing to do, I might just sit down and write software. No promises! I might or I might not. In either case, all my personal projects can be found in my <a href=\"https://github.com/FardinAhsan146\" target=\"_blank\">Github</a>. Even if I wasn't an AI engineer, I'd have a spot spot for foundation models and vector databases!",
     items: [
       {
         title: "Talk To Youtuber",
-        description: "A tool that lets you chat with any YouTuber by processing their video content into a conversational AI interface. The app downloads all videos from a specified YouTuber, adds them to a database, and performs semantic search to provide context-aware responses.",
+        description: "A tool that lets you \"talk\" with any YouTuber by processing their video content into a conversational AI interface. The app downloads all videos from a specified YouTuber, adds them to a database, and performs semantic search to provide context-aware responses.",
         features: [
           "Semantic search of video transcripts",
           "Conversational interface powered by GPT",
           "Portable database architecture using SQLite3 and ChromaDB",
           "No YouTube API credentials required"
         ],
-        use_case: "Created to extract restaurant recommendations from a travel YouTuber's videos before a trip to Japan. Using this tool, I've been able to add a bunch of places to my itinerary that would have been difficult to find otherwise.",
+        use_case: "I made this tool to \"talk\" to <a href=\"https://www.youtube.com/@japaneat\" target=\"_blank\">japaneat</a>, before my trip to Japan. A lot of knowledge is not searchable by text, but rather lives in YouTube videos. This is my solution to that",
         image: "assets/images/gifs/talk_to_youtuber-Trim-Trimonline-video-cutter.com-ezgif.com-video-to-gif-converter.gif",
         tags: [],
         github: "https://github.com/FardinAhsan146/TalkToYoutuber"
@@ -88,25 +101,25 @@ const siteData = {
 
   // Writing Section
   writing: {
-    title: "Hobby Writing",
-    description: "I write about various topics on my Substack. Feel free to check out my articles below.",
+    title: "Writing",
+    description: "Sometimes I want to write. It helps me organize my thoughts. But I don't nearly as much as I should. One day I will have enough free time to do so..",
     posts: [
       {
         title: "People don't wear jackets because it's cold, they do because it's winter.",
         author: "by Fardin Ahsan",
-        description: "An exploration of how social norms often drive our behaviors more than practical needs.",
+        description: "Why seeing Canada Goose in Dubai drives me insane.",
         url: "https://fardinahsan.substack.com/p/people-dont-wear-jackets-because"
       },
       {
         title: "The correct explanation for the Monty Hall problem",
         author: "by Fardin Ahsan",
-        description: "A clear breakdown of this famous probability puzzle that confuses even mathematicians.",
+        description: "This is how I understand the Monty Hall Problem. (This is the only correct explanation)",
         url: "https://fardinahsan.substack.com/p/the-correct-explanation-for-the-monty"
       },
       {
         title: "You know shits about to hit the fan when...",
         author: "by Fardin Ahsan",
-        description: "It's yet to hit all of us that LLM's will hit, and they are going to hit hard.",
+        description: "LLM's are beyond amazing, and they will change us as people, and we don't talk about it enough.",
         url: "https://fardinahsan.substack.com/p/you-know-shits-about-to-hit-the-fan"
       }
     ]

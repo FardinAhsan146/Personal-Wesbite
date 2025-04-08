@@ -47,7 +47,8 @@ function populateAbout(aboutData) {
     
     // Set about title and description
     document.querySelector('#about .section-title').textContent = aboutData.title;
-    document.querySelector('#about .about-text p').textContent = aboutData.description;
+    // Replace newlines with <br> tags to render line breaks properly
+    document.querySelector('#about .about-text p').innerHTML = aboutData.description.replace(/\n/g, '<br>');
     
     // Populate photo slider
     const sliderTrack = document.querySelector('.slider-track');
@@ -176,6 +177,11 @@ function populateProjects(projectsData) {
     
     document.querySelector('#projects .section-title').textContent = projectsData.title;
     
+    // Set project description if available
+    if (projectsData.description) {
+        document.querySelector('#projects .section-description').innerHTML = projectsData.description;
+    }
+    
     const projectsContainer = document.querySelector('.project-container');
     if (projectsContainer && projectsData.items) {
         // Clear existing projects
@@ -237,7 +243,7 @@ function populateProjects(projectsData) {
                 useCaseContainer.appendChild(useCaseTitle);
                 
                 const useCase = document.createElement('p');
-                useCase.textContent = project.use_case;
+                useCase.innerHTML = project.use_case;
                 useCaseContainer.appendChild(useCase);
                 projectInfo.appendChild(useCaseContainer);
             }
