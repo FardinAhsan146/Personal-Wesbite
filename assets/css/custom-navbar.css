@@ -1,0 +1,13 @@
+/* Custom navbar styles to remove logo and center navigation links */
+.main-nav .container {
+    justify-content: center;
+}
+
+.main-nav .logo {
+    display: none;
+}
+
+.nav-links {
+    justify-content: center;
+    width: 100%;
+}

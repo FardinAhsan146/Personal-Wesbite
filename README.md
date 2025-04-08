@@ -1,46 +1,33 @@
-# Personal Website
+# Personal Website Content Management
 
-A personal portfolio website for Fardin Ahsan, a data scientist.
+This website has been refactored to use a single source of truth for all content.
 
-## Project Structure
+## How It Works
 
-The project follows a standard static website structure:
+All website content is stored in a single file: `data/site-content.js`
 
-```
-/
-├── index.html              # Main HTML file
-├── README.md               # Project documentation
-├── assets/                 # All static assets
-│   ├── css/                # CSS files
-│   │   ├── main.css        # Main CSS file that imports all other CSS files
-│   │   ├── variables.css   # CSS variables
-│   │   ├── base.css        # Base styles
-│   │   ├── layout.css      # Layout styles
-│   │   ├── components.css  # Component styles
-│   │   ├── sections.css    # Section styles
-│   │   ├── animations.css  # Animation styles
-│   │   └── responsive.css  # Responsive styles
-│   ├── js/                 # JavaScript files
-│   │   ├── site-data.js    # Site data
-│   │   └── data-loader.js  # Data loader
-│   ├── images/             # Image files
-│   │   ├── gifs/           # GIF files
-│   │   └── instagram/      # Instagram images
-│   └── fonts/              # Font files (if any)
-└── data/                   # Data files
-    └── content.yml         # Content data in YAML format
-```
+This file serves as both:
+1. A human-readable content file (with clear comments and formatting)
+2. A JavaScript object that the website uses directly
 
-## Development
+## Editing Content
 
-This is a static website that uses HTML, CSS, and JavaScript. The content is loaded from a YAML file using JavaScript.
+To update your website content:
 
-## Features
+1. Edit the `data/site-content.js` file
+   - The file is formatted in a YAML-like style for easy reading and editing
+   - Each section is clearly labeled with comments
+   - Make changes directly to the values in this file
 
-- Responsive design
-- Dark mode toggle
-- Content loaded from YAML data
-- Photo slider
-- Project showcase
-- Blog post links
-- Contact information
+2. Save the file and refresh your website to see the changes
+
+That's it! No conversion steps, no manual syncing, no external tools needed.
+
+## Benefits of This Approach
+
+- Single source of truth for all content
+- Easy to edit format with clear organization
+- No build steps or external tools required
+- No manual conversion or syncing needed
+- Works with any static web hosting
+- No CORS issues since it's a JavaScript file

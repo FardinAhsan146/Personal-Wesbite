@@ -361,11 +361,12 @@ function populateContact(contactData) {
     if (contactGrid && contactData.items) {
         contactGrid.innerHTML = '';
         
-        // Ensure Resume and Email are in the first row, LinkedIn and WhatsApp in the second row
+        // Ensure Resume and Email are in the first row, LinkedIn, GitHub and WhatsApp in the second row
         const orderedItems = [
             contactData.items.find(item => item.title === "Resume"),
             contactData.items.find(item => item.title === "Email"),
             contactData.items.find(item => item.title === "LinkedIn"),
+            contactData.items.find(item => item.title === "GitHub"),
             contactData.items.find(item => item.title === "WhatsApp")
         ];
         
@@ -785,8 +786,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const themeToggle = document.getElementById('themeToggle');
     const body = document.body;
     
-    // Preload and verify all images
-    preloadAndVerifyImages();
+    // Image loading status window removed as requested
+    // preloadAndVerifyImages();
     
     // Check for saved theme preference
     if (localStorage.getItem('darkMode') === 'true') {
