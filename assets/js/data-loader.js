@@ -119,29 +119,7 @@ function populateAbout(aboutData) {
             sliderDots.appendChild(dot);
         });
         
-        // Add a touch hint for mobile users
-        const photoSliderContainer = document.querySelector('.photo-slider-container');
-        if (photoSliderContainer && !photoSliderContainer.querySelector('.touch-hint')) {
-            const touchHint = document.createElement('div');
-            touchHint.className = 'touch-hint';
-            touchHint.textContent = 'Swipe to see more';
-            touchHint.style.display = 'none';
-            
-            // Only show on mobile devices
-            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                touchHint.style.display = 'block';
-                
-                // Hide after 3 seconds
-                setTimeout(() => {
-                    touchHint.style.opacity = '0';
-                    setTimeout(() => {
-                        touchHint.remove();
-                    }, 500);
-                }, 3000);
-            }
-            
-            photoSliderContainer.appendChild(touchHint);
-        }
+        // Touch hint removed as it's obvious how to navigate
     }
 }
 
@@ -538,11 +516,7 @@ function initPhotoSlider() {
     // Add progress bars to the slider
     sliderContainer.insertBefore(progressContainer, sliderContainer.firstChild);
     
-    // Add touch indicator
-    const touchIndicator = document.createElement('div');
-    touchIndicator.className = 'touch-indicator';
-    touchIndicator.textContent = 'Swipe to navigate';
-    sliderContainer.appendChild(touchIndicator);
+    // Touch indicator removed as it's obvious how to navigate
     
     // Set initial position
     updateSlider();

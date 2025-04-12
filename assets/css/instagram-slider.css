@@ -186,25 +186,7 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-/* Touch Indicator */
-.touch-indicator {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.5);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-}
-
-.photo-slider-container:hover .touch-indicator {
-    opacity: 1;
-}
+/* Touch Indicator removed as it's obvious how to navigate */
 
 /* Clean, Minimalist Location Styles */
 .instagram-location {
