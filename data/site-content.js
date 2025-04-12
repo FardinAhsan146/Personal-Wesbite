@@ -102,7 +102,7 @@ const siteData = {
   // Writing Section
   writing: {
     title: "Writing",
-    description: "Sometimes I want to write. It helps me organize my thoughts. But I don't nearly as much as I should. One day I will have enough free time to do so..",
+    description: "Sometimes I want write. Even if my ideas aren't crazy or novel, It helps me organize my thoughts. I don't get to nearly as much as I want to though.",
     posts: [
       {
         title: "People don't wear jackets because it's cold, they do because it's winter.",
