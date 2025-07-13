@@ -132,7 +132,7 @@ const siteData = {
       {
         title: "Resume",
         icon: "fas fa-file-alt",
-        url: "https://drive.google.com/file/d/1jsR9AaaOVBptp_G9YGB3_04Lb5ZbZDgs/view?usp=sharing",
+        url: "https://drive.google.com/file/d/18e63mDsTSdyvWZitiX6p7H_mjxuU3qe-/view?usp=sharing",
         text: "View Resume"
       },
       {
