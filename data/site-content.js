@@ -164,6 +164,12 @@ const siteData = {
         icon: "fab fa-telegram",
         url: "https://t.me/flipperzunderthehood",
         text: "@flipperzunderthehood"
+      },
+      {
+        title: "Schedule a Meeting",
+        icon: "fas fa-calendar-alt",
+        url: "https://calendly.com/fardinahsan146/30min",
+        text: "Book a free 30-min call"
       }
     ]
   },
