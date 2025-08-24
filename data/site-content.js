@@ -190,6 +190,11 @@ const siteData = {
       platform: "Steam",
       icon: "fab fa-steam",
       url: "https://steamcommunity.com/id/keyboardwar123/"
+    },
+    {
+      platform: "ResearchGate",
+      icon: "fab fa-researchgate",
+      url: "https://www.researchgate.net/profile/Fardin-Ahsan-3"
     }
   ]
 };
