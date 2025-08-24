@@ -170,6 +170,12 @@ const siteData = {
         icon: "fas fa-calendar-alt",
         url: "https://calendly.com/fardinahsan146/30min",
         text: "Book a free 30-min call"
+      },
+      {
+        title: "ResearchGate",
+        icon: "fab fa-researchgate",
+        url: "https://www.researchgate.net/profile/Fardin-Ahsan-3",
+        text: "Fardin Ahsan"
       }
     ]
   },
@@ -190,11 +196,6 @@ const siteData = {
       platform: "Steam",
       icon: "fab fa-steam",
       url: "https://steamcommunity.com/id/keyboardwar123/"
-    },
-    {
-      platform: "ResearchGate",
-      icon: "fab fa-researchgate",
-      url: "https://www.researchgate.net/profile/Fardin-Ahsan-3"
     }
   ]
 };
