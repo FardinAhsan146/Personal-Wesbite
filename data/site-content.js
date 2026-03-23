@@ -24,7 +24,7 @@ const siteData = {
 
   // Navigation
   navigation: [
-    { name: "About", url: "#about" },
+    { name: "Photos", url: "#photos" },
     { name: "Projects", url: "#projects" },
     { name: "Writing", url: "#writing" },
     { name: "Contact", url: "#contact" }
@@ -33,31 +33,63 @@ const siteData = {
   // About Section
   about: {
     title: "",
-    description: `I'm a ${calculateAge()}-year-old self-taught AI Engineer trying to understand the crazy world we live in.\nWhen I am not working, you might find me at home writing code, at the gym lifting weights, playing badminton; at a random street in Dubai, cycling using a Careem bike (hear me out), or at the gokarting circuit.`,
+    description: `I'm a ${calculateAge()}-year-old self-taught Software Engineer trying to understand the crazy world we live in.\nWhen I am not working, you might find me at home writing code, at the gym lifting weights, playing badminton; at a random street in Dubai, cycling using a Careem bike (hear me out), or at the gokarting circuit. Or driving up the nearest mountain roads.`,
     photos: [
       {
         image: "assets/images/instagram/download.jpg",
         title: "That's me posing",
         caption: "I pose infront of a mountain everywhere I go.",
-        location: "Kazbegi, Georgia"
+        location: "Kazbegi, Georgia",
+        group: "mountains"
       },
       {
         image: "assets/images/instagram/download (1).jpg",
         title: "Here I am enjoying the view",
         caption: "I didn't pass up the chance to post infront of a mountain here either.",
-        location: "Lake Shikotsu, Hokkaido"
+        location: "Lake Shikotsu, Hokkaido",
+        group: "mountains"
       },
       {
         image: "assets/images/instagram/download (2).jpg",
         title: "Iconic mountain view",
         caption: "You think I wasn't going to pose infront Mount Fuji?",
-        location: "Mount Fuji"
+        location: "Mount Fuji",
+        group: "mountains"
+      },
+      {
+        image: "assets/images/kazbegi.jpeg",
+        title: "Mount Kazbek",
+        caption: "I'll climb Mount Kazbek one day",
+        location: "Kazbegi, Georgia",
+        group: "mountains"
       },
       {
         image: "assets/images/instagram/kart.jpeg",
         title: "I love gokarting",
         caption: "Catch me gokarting every chance I get.",
-        location: "Dubai Kartdrome Circuit"
+        location: "Dubai Kartdrome Circuit",
+        group: "motor"
+      },
+      {
+        image: "assets/images/track/download.webp",
+        title: "",
+        caption: "",
+        location: "",
+        group: "motor"
+      },
+      {
+        image: "assets/images/track/download (1).webp",
+        title: "",
+        caption: "",
+        location: "",
+        group: "motor"
+      },
+      {
+        image: "assets/images/track/download (2).webp",
+        title: "",
+        caption: "",
+        location: "",
+        group: "motor"
       }
     ]
   },
@@ -65,7 +97,7 @@ const siteData = {
 
   // Projects Section
   projects: {
-    title: "Projects",
+    title: "On the Computer",
     description: "When I have nothing to do, I might just sit down and write software. No promises! I might or I might not. In either case, all my personal projects can be found in my <a href=\"https://github.com/FardinAhsan146\" target=\"_blank\">Github</a>. Even if I wasn't an AI engineer, I'd have a soft spot for foundation models and vector databases!",
     items: [
       {
@@ -132,7 +164,7 @@ const siteData = {
       {
         title: "Resume",
         icon: "fas fa-file-alt",
-        url: "https://drive.google.com/file/d/18e63mDsTSdyvWZitiX6p7H_mjxuU3qe-/view?usp=sharing",
+        url: "https://drive.google.com/file/d/1HC--UQjuPA3svQusDDFzXnxx65SG7s09/view?usp=drive_link",
         text: "View Resume"
       },
       {
