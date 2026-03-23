@@ -3,133 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Fardin Ahsan - Self-taught data scientist passionate about building better predictive models of The World">
+    <meta name="description" content="Fardin Ahsan - AI Engineer based in Dubai. Self-taught data scientist building AI tools, writing about technology, and exploring the world.">
+    <meta name="keywords" content="Fardin Ahsan, AI Engineer, Data Scientist, Dubai, Machine Learning, Python, NLP">
+    <meta name="author" content="Fardin Ahsan">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Fardin Ahsan - AI Engineer">
+    <meta property="og:description" content="Self-taught AI Engineer based in Dubai. Building tools with foundation models, writing about tech, and exploring the world.">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Fardin Ahsan - AI Engineer">
+    <meta name="twitter:description" content="Self-taught AI Engineer based in Dubai. Building tools with foundation models and writing about tech.">
+
     <title>Fardin Ahsan</title>
-    
-    <!-- Google tag (gtag.js) -->
+
+    <link rel="canonical" href="https://fardinahsan.com">
+
+    <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-TSMG1Z6413"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-TSMG1Z6413');
     </script>
-    
-    <!-- Preconnect to external resources -->
+
+    <!-- Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-    
-    <!-- Font Awesome for icons -->
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- js-yaml for parsing YAML data -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
-    
-    <!-- Main stylesheet -->
-    <link rel="stylesheet" href="assets/css/main.css">
-    
-    <!-- Custom navbar styles -->
-    <link rel="stylesheet" href="assets/css/custom-navbar.css">
-    
-    <!-- Theme toggle script removed -->
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="assets/css/style.css">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Fardin Ahsan",
+      "jobTitle": "AI Engineer",
+      "url": "https://fardinahsan.com",
+      "sameAs": [
+        "https://github.com/FardinAhsan146",
+        "https://www.linkedin.com/in/fardin-ahsan/",
+        "https://fardinahsan.substack.com/"
+      ]
+    }
+    </script>
 </head>
 <body>
-    <!-- Retro cursor trail container -->
-    <div class="cursor-trail-container"></div>
-    
-    
-    <!-- Navigation bar -->
-    <nav class="main-nav">
-        <div class="container">
-            <a href="#" class="logo retro-text">FA</a>
-            <div class="nav-links" id="main-nav">
-                <!-- Navigation links will be populated from YAML -->
-            </div>
+    <!-- Grain overlay -->
+
+
+    <!-- Navigation -->
+    <nav class="nav" id="nav">
+        <div class="nav-inner">
+            <a href="#" class="nav-logo">
+                <span class="logo-kanji" aria-hidden="true">遠</span>
+                <span class="logo-text">Fardin</span>
+            </a>
+            <div class="nav-links" id="main-nav"></div>
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </nav>
-    
+
     <main>
-        <!-- About section -->
-        <section id="about" class="full-width-section">
-            <div class="container">
-                <h2 class="section-title reveal">About Me</h2>
-                <div class="about-content reveal">
-                    <div class="about-text">
-                        <p class="section-description">I'm a self-taught data scientist who is passionate about building better predictive models of The World. I spend a significant portion of my free time reading up on Statistics and programming pet projects using Python. I also like cycling, building PC's, playing FPS and racing games and travelling.</p>
+        <!-- Hero -->
+        <section class="hero" id="hero">
+            <!-- Static mountain range -->
+            <div class="hero-bg" aria-hidden="true">
+                <div class="mountain-layer mountain-far">
+                    <svg viewBox="0 0 1440 500" preserveAspectRatio="none">
+                        <path d="M0,500 L0,350 L120,200 L240,300 L400,100 L520,250 L680,50 L800,200 L960,80 L1100,220 L1280,120 L1440,280 L1440,500 Z"/>
+                    </svg>
+                </div>
+                <div class="mountain-layer mountain-mid">
+                    <svg viewBox="0 0 1440 500" preserveAspectRatio="none">
+                        <path d="M0,500 L0,380 L200,220 L350,320 L500,160 L650,280 L820,100 L980,260 L1100,180 L1250,300 L1380,200 L1440,260 L1440,500 Z"/>
+                    </svg>
+                </div>
+                <div class="mountain-layer mountain-near">
+                    <svg viewBox="0 0 1440 500" preserveAspectRatio="none">
+                        <path d="M0,500 L0,400 L160,300 L300,380 L460,260 L600,340 L780,220 L900,320 L1060,240 L1200,340 L1360,280 L1440,340 L1440,500 Z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="container hero-layout">
+                <div class="hero-content">
+                    <h1 class="hero-name glitch-text" id="hero-name" data-text="Fardin Ahsan">Fardin Ahsan</h1>
+                    <p class="hero-title" id="hero-title">
+                        <span class="title-bracket">&lt;</span>
+                        AI Engineer
+                        <span class="title-bracket">/&gt;</span>
+                    </p>
+                    <p class="hero-bio" id="hero-bio"></p>
+                    <div class="hero-cta">
+                        <a href="#projects" class="btn btn-primary">
+                            <span class="btn-glow"></span>
+                            View Projects
+                        </a>
+                        <a href="#contact" class="btn btn-ghost">Get in Touch</a>
                     </div>
-                    
-                    <div class="photo-slider-container">
-                        <div class="photo-slider">
-                            <div class="slider-track">
-                                <!-- Photo slides will be populated from YAML -->
-                            </div>
-                            
-                            <div class="slider-controls">
-                                <button class="slider-arrow prev-arrow"><i class="fas fa-chevron-left"></i></button>
-                                <div class="slider-dots">
-                                    <!-- Dots will be populated from YAML -->
-                                </div>
-                                <button class="slider-arrow next-arrow"><i class="fas fa-chevron-right"></i></button>
-                            </div>
-                        </div>
+                </div>
+            </div>
+            <div class="hero-toys">
+                <div class="toy-card toy-card--tall">
+                    <div class="toy-card-frame">
+                        <img src="assets/images/toyota 86.webp" alt="Fardin with his Toyota GR86">
                     </div>
+                    <span class="toy-card-label">My Favorite Toy</span>
+                </div>
+                <div class="toy-card toy-card--wide">
+                    <div class="toy-card-frame">
+                        <img src="assets/images/computer.jpeg" alt="Fardin's computer setup">
+                    </div>
+                    <span class="toy-card-label">My Other Favorite Toy</span>
                 </div>
             </div>
-        </section>
-        
-        
-        <!-- Projects section -->
-        <section id="projects" class="full-width-section">
-            <div class="container">
-                <h2 class="section-title reveal">Personal Projects</h2>
-                <p class="section-description reveal">All my personal projects can be found in my <a href="https://github.com/FardinAhsan146" target="_blank">Github</a>. Below are some of my recent projects that showcase my skills and interests.</p>
-                
-                <div class="project-container">
-                    <!-- Project cards will be populated from YAML -->
-                </div>
+
+            <!-- Wave divider -->
+            <div class="section-divider" aria-hidden="true">
+                <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+                    <path d="M0,80 C240,120 480,20 720,60 C960,100 1200,30 1440,70 L1440,120 L0,120 Z" fill="var(--bg-alt)"/>
+                    <path d="M0,90 C360,50 720,110 1080,60 C1260,35 1380,80 1440,90 L1440,120 L0,120 Z" fill="var(--bg-alt)" opacity="0.5"/>
+                </svg>
             </div>
         </section>
-        
-        <!-- Writing section -->
-        <section id="writing" class="full-width-section bg-section">
+
+        <!-- Mountains Photos -->
+        <section class="photos-section" id="photos">
             <div class="container">
-                <h2 class="section-title reveal">Hobby Writing</h2>
-                <p class="section-description reveal">I write about various topics on my Substack. Feel free to check out my articles below.</p>
-                
-                <div class="substack-embeds reveal">
-                    <!-- Substack posts will be populated from YAML -->
+                <div class="section-header">
+                    <h2 class="section-title">Chasing Mountains <span class="title-accent">everywhere.</span></h2>
                 </div>
             </div>
+            <div class="photos-track">
+                <div class="photos-scroll" id="mountain-photos"></div>
+            </div>
         </section>
-        
-        <!-- Instagram section removed as requested -->
-        
-        <!-- Contact section -->
-        <section id="contact" class="full-width-section bg-section">
+
+        <!-- Motor Photos -->
+        <section class="photos-section photos-motor" id="motor">
             <div class="container">
-                <h2 class="section-title reveal">Contact Me</h2>
-                
-                <div class="contact-grid">
-                    <!-- Contact items will be populated from YAML -->
+                <div class="section-header">
+                    <h2 class="section-title">On the <span class="title-accent">track.</span></h2>
                 </div>
+            </div>
+            <div class="photos-track">
+                <div class="photos-scroll" id="motor-photos"></div>
+            </div>
+        </section>
+
+        <!-- Mountain divider -->
+        <div class="mountain-divider" aria-hidden="true">
+            <svg viewBox="0 0 1440 100" preserveAspectRatio="none">
+                <path d="M0,100 L0,60 L200,20 L400,50 L600,10 L800,40 L1000,5 L1200,35 L1440,15 L1440,100 Z" fill="var(--bg)"/>
+            </svg>
+        </div>
+
+        <!-- Projects -->
+        <section class="section" id="projects">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Projects</h2>
+                </div>
+                <p class="section-desc" id="projects-desc"></p>
+                <div class="projects-grid" id="projects-grid"></div>
+            </div>
+        </section>
+
+        <!-- Writing -->
+        <section class="section section-alt" id="writing">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Writing</h2>
+                </div>
+                <p class="section-desc" id="writing-desc"></p>
+                <div class="writing-grid" id="writing-grid"></div>
+            </div>
+        </section>
+
+        <!-- Contact -->
+        <section class="section" id="contact">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Let's <span class="title-accent">connect.</span></h2>
+                </div>
+                <div class="contact-grid" id="contact-grid"></div>
             </div>
         </section>
     </main>
-    
+
     <!-- Footer -->
-    <footer class="full-width-section">
+    <footer class="footer">
         <div class="container">
-            <div class="social-links">
-                <!-- Social links will be populated from YAML -->
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <span class="footer-kanji" aria-hidden="true">遠</span>
+                    <div>
+                        <p class="footer-name">Fardin Ahsan</p>
+                        <p class="footer-tagline" id="footer-tagline"></p>
+                    </div>
+                </div>
+                <div class="footer-links" id="footer-links"></div>
             </div>
-            <p>© 2025 Fardin Ahsan. All rights reserved.</p>
+            <div class="footer-bottom">
+                <p class="footer-copy" id="footer-copy"></p>
+                <p class="footer-made">Made with late nights & good music</p>
+            </div>
         </div>
     </footer>
-    
-    <!-- Site content and data loader scripts -->
+
     <script src="data/site-content.js"></script>
-    <script src="assets/js/data-loader.js"></script>
+    <script src="assets/js/app.js"></script>
 </body>
 </html>

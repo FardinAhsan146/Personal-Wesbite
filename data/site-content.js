@@ -24,7 +24,7 @@ const siteData = {
 
   // Navigation
   navigation: [
-    { name: "About", url: "#about" },
+    { name: "Photos", url: "#photos" },
     { name: "Projects", url: "#projects" },
     { name: "Writing", url: "#writing" },
     { name: "Contact", url: "#contact" }
@@ -39,25 +39,57 @@ const siteData = {
         image: "assets/images/instagram/download.jpg",
         title: "That's me posing",
         caption: "I pose infront of a mountain everywhere I go.",
-        location: "Kazbegi, Georgia"
+        location: "Kazbegi, Georgia",
+        group: "mountains"
       },
       {
         image: "assets/images/instagram/download (1).jpg",
         title: "Here I am enjoying the view",
         caption: "I didn't pass up the chance to post infront of a mountain here either.",
-        location: "Lake Shikotsu, Hokkaido"
+        location: "Lake Shikotsu, Hokkaido",
+        group: "mountains"
       },
       {
         image: "assets/images/instagram/download (2).jpg",
         title: "Iconic mountain view",
         caption: "You think I wasn't going to pose infront Mount Fuji?",
-        location: "Mount Fuji"
+        location: "Mount Fuji",
+        group: "mountains"
+      },
+      {
+        image: "assets/images/kazbegi.jpeg",
+        title: "Mount Kazbek",
+        caption: "I'll climb Mount Kazbek one day",
+        location: "Kazbegi, Georgia",
+        group: "mountains"
       },
       {
         image: "assets/images/instagram/kart.jpeg",
         title: "I love gokarting",
         caption: "Catch me gokarting every chance I get.",
-        location: "Dubai Kartdrome Circuit"
+        location: "Dubai Kartdrome Circuit",
+        group: "motor"
+      },
+      {
+        image: "assets/images/track/download.webp",
+        title: "",
+        caption: "",
+        location: "",
+        group: "motor"
+      },
+      {
+        image: "assets/images/track/download (1).webp",
+        title: "",
+        caption: "",
+        location: "",
+        group: "motor"
+      },
+      {
+        image: "assets/images/track/download (2).webp",
+        title: "",
+        caption: "",
+        location: "",
+        group: "motor"
       }
     ]
   },
@@ -132,7 +164,7 @@ const siteData = {
       {
         title: "Resume",
         icon: "fas fa-file-alt",
-        url: "https://drive.google.com/file/d/18e63mDsTSdyvWZitiX6p7H_mjxuU3qe-/view?usp=sharing",
+        url: "https://drive.google.com/file/d/1HC--UQjuPA3svQusDDFzXnxx65SG7s09/view?usp=drive_link",
         text: "View Resume"
       },
       {
