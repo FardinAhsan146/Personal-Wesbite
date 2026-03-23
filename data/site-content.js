@@ -33,7 +33,7 @@ const siteData = {
   // About Section
   about: {
     title: "",
-    description: `I'm a ${calculateAge()}-year-old self-taught AI Engineer trying to understand the crazy world we live in.\nWhen I am not working, you might find me at home writing code, at the gym lifting weights, playing badminton; at a random street in Dubai, cycling using a Careem bike (hear me out), or at the gokarting circuit.`,
+    description: `I'm a ${calculateAge()}-year-old self-taught Software Engineer trying to understand the crazy world we live in.\nWhen I am not working, you might find me at home writing code, at the gym lifting weights, playing badminton; at a random street in Dubai, cycling using a Careem bike (hear me out), or at the gokarting circuit. Or driving up the nearest mountain roads.`,
     photos: [
       {
         image: "assets/images/instagram/download.jpg",
@@ -97,7 +97,7 @@ const siteData = {
 
   // Projects Section
   projects: {
-    title: "Projects",
+    title: "On the Computer",
     description: "When I have nothing to do, I might just sit down and write software. No promises! I might or I might not. In either case, all my personal projects can be found in my <a href=\"https://github.com/FardinAhsan146\" target=\"_blank\">Github</a>. Even if I wasn't an AI engineer, I'd have a soft spot for foundation models and vector databases!",
     items: [
       {
