@@ -230,15 +230,38 @@ function initMobileNav() {
   const toggle = document.getElementById('nav-toggle');
   const links = document.getElementById('main-nav');
 
+  function closeNav() {
+    links.classList.remove('open');
+    toggle.classList.remove('active');
+    document.body.classList.remove('nav-open');
+  }
+
+  function openNav() {
+    links.classList.add('open');
+    toggle.classList.add('active');
+    document.body.classList.add('nav-open');
+  }
+
   toggle.addEventListener('click', () => {
-    links.classList.toggle('open');
-    toggle.classList.toggle('active');
+    if (links.classList.contains('open')) {
+      closeNav();
+    } else {
+      openNav();
+    }
   });
 
   links.addEventListener('click', (e) => {
     if (e.target.tagName === 'A') {
-      links.classList.remove('open');
-      toggle.classList.remove('active');
+      closeNav();
+    }
+  });
+
+  // Close nav when tapping outside
+  document.addEventListener('click', (e) => {
+    if (links.classList.contains('open') &&
+        !links.contains(e.target) &&
+        !toggle.contains(e.target)) {
+      closeNav();
     }
   });
 }
