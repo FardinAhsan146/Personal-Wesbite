@@ -1,33 +1,45 @@
-# Personal Website Content Management
+# Fardin Ahsan — Personal Website ("Pit Wall")
 
-This website has been refactored to use a single source of truth for all content.
+A dark, telemetry-dashboard personal site: an instrument-cluster hero with live
+analog gauges (a working tach + speedo driving simulator), plus sections for
+software projects, the GT 86, mountains, writing, and contact.
 
-## How It Works
+## How it works
 
-All website content is stored in a single file: `data/site-content.js`
+It's a static site — no build step. The page is React rendered in the browser
+via Babel standalone, so you can edit and refresh directly.
 
-This file serves as both:
-1. A human-readable content file (with clear comments and formatting)
-2. A JavaScript object that the website uses directly
+| File | What it is |
+|------|------------|
+| `index.html` | Page shell — loads fonts, Font Awesome, React, Babel, and the scripts below |
+| `styles.css` | All styling (design tokens, layout, gauge chrome, sections) |
+| `gauges.jsx` | SVG analog instruments — `PWTach`, `PWSpeedo`, `PWMiniGauge`, `PWBar` |
+| `app.jsx` | The page itself — nav, hero + gauge cluster, projects, motor, travel, writing, contact |
+| `assets/` | Images and project demo GIFs |
 
-## Editing Content
+## Editing
 
-To update your website content:
+- **Content / copy** — edit the relevant component in `app.jsx`.
+- **Styling** — edit `styles.css` (colors live in the `:root` token block).
+- **Gauge behaviour** — the driving-sim modes (`PULL`, `ENG_BRAKE`, `LAUNCH`,
+  `TRACK`, `LIMITER`, `BURNOUT`, `IDLE`) are defined in the `SIMS` object in `app.jsx`.
 
-1. Edit the `data/site-content.js` file
-   - The file is formatted in a YAML-like style for easy reading and editing
-   - Each section is clearly labeled with comments
-   - Make changes directly to the values in this file
+Save and refresh — no compile step.
 
-2. Save the file and refresh your website to see the changes
+## Running locally
 
-That's it! No conversion steps, no manual syncing, no external tools needed.
+Because the `.jsx` files are fetched over HTTP, open it through a local server
+rather than `file://`:
 
-## Benefits of This Approach
+```sh
+python3 -m http.server 8000
+# then visit http://localhost:8000
+```
 
-- Single source of truth for all content
-- Easy to edit format with clear organization
-- No build steps or external tools required
-- No manual conversion or syncing needed
-- Works with any static web hosting
-- No CORS issues since it's a JavaScript file
+## Deploying
+
+Any static host works (GitHub Pages, Netlify, etc.) — just serve the repo root.
+
+> Note: this uses in-browser Babel transpilation, which is convenient for a
+> personal site but adds a little load-time cost. If you ever want a faster
+> production build, the `.jsx` can be precompiled with a bundler.
