@@ -94,6 +94,24 @@ a:hover { color: var(--pw-fg); }
 }
 .pw-nav__cell--right { border-right: 0; border-left: 1px solid var(--pw-line-soft); margin-left: auto; color: var(--pw-amber); }
 
+/* Links wrapper is transparent on desktop — children flow as nav flex cells */
+.pw-nav__links { display: contents; }
+/* Hamburger — hidden on desktop, shown on mobile */
+.pw-nav__burger {
+  display: none;
+  flex-direction: column; justify-content: center; gap: 4px;
+  width: 48px; padding: 0 16px;
+  border: 0; border-left: 1px solid var(--pw-line-soft);
+  background: transparent; cursor: pointer;
+}
+.pw-nav__burger span {
+  display: block; width: 20px; height: 1.5px;
+  background: var(--pw-fg); transition: transform .2s ease, opacity .2s ease;
+}
+.pw-nav--open .pw-nav__burger span:nth-child(1) { transform: translateY(5.5px) rotate(45deg); }
+.pw-nav--open .pw-nav__burger span:nth-child(2) { opacity: 0; }
+.pw-nav--open .pw-nav__burger span:nth-child(3) { transform: translateY(-5.5px) rotate(-45deg); }
+
 .pw-pulse { animation: pw-pulse 1.2s steps(2) infinite; }
 @keyframes pw-pulse { 0%, 70% { opacity: 1 } 80%, 100% { opacity: .25 } }
 .pw-flick { animation: pw-flick 3.4s infinite; }
@@ -324,6 +342,7 @@ a:hover { color: var(--pw-fg); }
 
 /* Hero role badge — Founding Engineer @ EnergyIQ */
 .pw-hero__role {
+  position: relative; overflow: hidden;
   display: inline-flex; align-items: center; gap: 12px;
   align-self: flex-start;
   padding: 10px 16px;
@@ -335,10 +354,47 @@ a:hover { color: var(--pw-fg); }
   text-decoration: none;
   transition: border-color .15s ease, background .15s ease;
 }
-.pw-hero__role:hover { border-color: var(--pw-cyan); background: rgba(127,212,230,0.12); }
-.pw-hero__role strong { color: var(--pw-cyan); font-weight: 600; }
+/* Electric current sweeping along the badge */
+.pw-hero__role::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 0%, transparent 40%, rgba(127,212,230,0.28) 50%, transparent 60%, transparent 100%);
+  background-size: 220% 100%;
+  animation: pw-current 3.6s linear infinite;
+  pointer-events: none;
+}
+@keyframes pw-current {
+  0%   { background-position: 130% 0; }
+  100% { background-position: -130% 0; }
+}
+.pw-hero__role:hover { border-color: var(--pw-cyan); background: rgba(127,212,230,0.12); box-shadow: 0 0 18px rgba(127,212,230,0.25); }
+.pw-hero__role strong {
+  color: var(--pw-cyan); font-weight: 600;
+  text-shadow: 0 0 8px rgba(127,212,230,0.7), 0 0 16px rgba(127,212,230,0.35);
+}
 .pw-hero__role-at { color: var(--pw-fg-dimmer); }
 .pw-hero__role-dot { color: var(--pw-cyan); font-size: 9px; }
+/* Flickering lightning bolt */
+.pw-bolt { font-size: 12px; position: relative; z-index: 1; }
+.pw-bolt i {
+  color: var(--pw-cyan);
+  filter: drop-shadow(0 0 5px rgba(127,212,230,0.9));
+  animation: pw-flicker 2.4s steps(1, end) infinite;
+}
+@keyframes pw-flicker {
+  0%, 100%   { opacity: 1; }
+  43%        { opacity: 1; }
+  45%        { opacity: 0.25; }
+  47%        { opacity: 1; }
+  62%        { opacity: 1; }
+  64%        { opacity: 0.4; }
+  66%        { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pw-hero__role::before { animation: none; }
+  .pw-bolt i { animation: none; }
+}
+.pw-hero__role > span { position: relative; z-index: 1; }
 .pw-hero__role-arrow {
   color: var(--pw-fg-dimmer);
   font-size: 11px; letter-spacing: 0.1em;
@@ -429,13 +485,13 @@ a:hover { color: var(--pw-fg); }
   position: relative;
 }
 .pw-hero__cluster::before {
-  content: 'INSTRUMENT CLUSTER · CH-A';
+  content: 'INSTRUMENT CLUSTER';
   position: absolute; top: 8px; left: 14px;
   font-family: var(--pw-mono); font-size: 9.5px; letter-spacing: 0.24em;
   color: var(--pw-fg-dimmer); text-transform: uppercase;
 }
 .pw-hero__cluster::after {
-  content: '◉ TELEMETRY';
+  content: '';
   position: absolute; top: 8px; right: 14px;
   font-family: var(--pw-mono); font-size: 9.5px; letter-spacing: 0.24em;
   color: var(--pw-cyan); text-transform: uppercase;
@@ -1001,4 +1057,112 @@ a:hover { color: var(--pw-fg); }
   .pw-hero__cluster-row svg { max-width: min(84vw, 360px); height: auto; }
   .pw-cluster-side { width: 100%; max-width: 320px; min-width: 0; }
   .pw-sim__row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ============================================================
+   MOBILE — phones & small tablets (≤ 760px)
+   Collapsible nav + every section stacks and scales down.
+   ============================================================ */
+@media (max-width: 760px) {
+  :root { --pw-page-pad: 18px; }
+
+  /* --- Nav: brand + clock + hamburger; links drop down --- */
+  .pw-nav { flex-wrap: nowrap; align-items: stretch; }
+  .pw-nav__cell--brand { margin-right: auto; border-right: 0; font-size: 11px; }
+  .pw-nav__cell { padding: 13px 14px; }
+  .pw-nav__cell--right { order: 2; margin-left: 0; font-size: 10px; padding: 13px 12px; }
+  .pw-nav__burger { display: flex; order: 3; }
+
+  .pw-nav__links {
+    display: none; flex-direction: column;
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: rgba(12, 13, 16, 0.97);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border-bottom: 1px solid var(--pw-line);
+    box-shadow: 0 18px 32px -16px rgba(0, 0, 0, 0.8);
+  }
+  .pw-nav--open .pw-nav__links { display: flex; }
+  .pw-nav__links .pw-nav__cell {
+    border-right: 0;
+    border-bottom: 1px solid var(--pw-line-soft);
+    padding: 16px 18px; font-size: 12px;
+  }
+
+  /* --- Section rhythm --- */
+  .pw-section { padding: 52px var(--pw-page-pad); }
+  .pw-section__head { gap: 14px; margin-bottom: 26px; }
+  .pw-section__title { font-size: 38px; }
+  .pw-section__meta { text-align: left; align-items: flex-start; }
+  .pw-section__intro { font-size: 15px; }
+
+  /* --- Hero --- */
+  .pw-hero { padding: 84px var(--pw-page-pad) 32px; }
+  .pw-hero__grid { gap: 20px; }
+  /* Reorder: name + intro, then portrait, then the info panels */
+  .pw-hero__center { order: 1; }
+  .pw-portrait { order: 2; }
+  .pw-hero__rail { order: 3; }
+  .pw-hero__name { font-size: clamp(56px, 17vw, 92px); }
+  .pw-hero__lede { font-size: 16px; }
+  .pw-portrait { max-width: 100%; }
+  .pw-hero__role { font-size: 12.5px; gap: 9px; padding: 9px 13px; flex-wrap: wrap; }
+  /* When the badge wraps, the link drops to a clean full-width second line */
+  .pw-hero__role-arrow {
+    width: 100%; border-left: 0; padding-left: 0;
+    border-top: 1px solid var(--pw-line); padding-top: 7px; margin-top: 3px;
+  }
+
+  /* --- Gauge cluster --- */
+  .pw-hero__cluster { padding: 30px 14px 18px; }
+  .pw-sim { gap: 10px; flex-direction: column; align-items: stretch; }
+  .pw-sim__row { gap: 7px; width: 100%; }
+  .pw-shiftlights { gap: 5px; padding: 8px 10px; max-width: 100%; }
+  .pw-led { width: 17px; }
+
+  /* --- Build-log project cards: stack media over body --- */
+  .pw-projects { gap: 16px; }
+  .pw-project { grid-template-columns: 1fr; }
+  .pw-project__media { min-height: 220px; }
+  .pw-project__body { padding: 20px; }
+  .pw-project__name { font-size: 24px; }
+
+  /* --- Motor: stack hero overlay, shorten image --- */
+  .pw-motor { gap: 16px; }
+  .pw-motor__hero { min-height: 460px; }
+  .pw-motor__heroOverlay {
+    left: 18px; right: 18px; bottom: 18px;
+    grid-template-columns: 1fr; gap: 14px;
+  }
+  .pw-motor__title { font-size: 44px; }
+  .pw-motor__sub { font-size: 14px; }
+  .pw-motor__readout { grid-template-columns: auto 1fr; }
+
+  /* --- Range marquee: smaller cards --- */
+  .pw-range__card { flex-basis: 70vw; max-width: 300px; }
+
+  /* --- Letters: single column --- */
+  .pw-letter { min-height: 0; padding: 22px 20px; }
+  .pw-letter__title { font-size: 23px; }
+
+  /* --- Contact --- */
+  .pw-contact { gap: 18px; }
+  .pw-contact__hailing { padding: 24px 20px; }
+  .pw-contact__big { font-size: 34px; }
+  .pw-contact__big br { display: none; }
+  .pw-contact__body { font-size: 15px; }
+  .pw-avail__grid { grid-template-columns: 1fr; }
+  .pw-avail__col + .pw-avail__col { border-left: 0; border-top: 1px solid var(--pw-line-soft); }
+  /* Channel grid stays 2-up; force equal columns + let long addresses wrap */
+  .pw-contact__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pw-contact__row { min-width: 0; padding: 22px 12px 18px; }
+  .pw-ch-target { overflow-wrap: anywhere; max-width: 100%; text-align: center; }
+}
+
+/* Extra-small phones (≤ 400px) */
+@media (max-width: 400px) {
+  .pw-nav__cell--right { display: none; }
+  .pw-section__title { font-size: 32px; }
+  .pw-hero__name { font-size: clamp(46px, 15vw, 70px); }
+  .pw-sim__row { grid-template-columns: 1fr 1fr; }
 }

@@ -87,6 +87,7 @@ function Reveal({ as: Tag = 'div', className = '', children, stagger = false, st
 // -----------------------------------------------------------------
 function PwNav() {
   const [active, setActive] = useState('Home');
+  const [menuOpen, setMenuOpen] = useState(false);
   const links = [
     ['Home', '#top'],
     ['Projects', '#build-log'],
@@ -96,24 +97,34 @@ function PwNav() {
     ['Contact', '#open-channel'],
   ];
   return (
-    <nav className="pw-nav">
+    <nav className={'pw-nav' + (menuOpen ? ' pw-nav--open' : '')}>
       <div className="pw-nav__cell pw-nav__cell--brand">
         <span className="pw-dot">◉</span>&nbsp;&nbsp;FARDIN AHSAN
       </div>
-      {links.map(([label, href]) => (
-        <a
-          key={label}
-          href={href}
-          onClick={() => setActive(label)}
-          className={'pw-nav__cell' + (active === label ? ' pw-nav__cell--active' : '')}
-          style={{ color: 'inherit', textDecoration: 'none' }}
-        >
-          {label}
-        </a>
-      ))}
-      <div className="pw-nav__cell pw-nav__cell--right">
-        <span className="pw-pulse">●</span>&nbsp;&nbsp;<DxbClock />
+      <div className="pw-nav__links">
+        {links.map(([label, href]) => (
+          <a
+            key={label}
+            href={href}
+            onClick={() => { setActive(label); setMenuOpen(false); }}
+            className={'pw-nav__cell' + (active === label ? ' pw-nav__cell--active' : '')}
+            style={{ color: 'inherit', textDecoration: 'none' }}
+          >
+            {label}
+          </a>
+        ))}
       </div>
+      <div className="pw-nav__cell pw-nav__cell--right">
+        <DxbClock />
+      </div>
+      <button
+        className="pw-nav__burger"
+        aria-label="Toggle menu"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((o) => !o)}
+      >
+        <span></span><span></span><span></span>
+      </button>
     </nav>
   );
 }
@@ -129,7 +140,7 @@ function DxbClock() {
     hour: '2-digit', minute: '2-digit', second: '2-digit',
     hour12: false, timeZone: 'Asia/Dubai',
   }).format(now);
-  return <>LIVE · DXB {t} GST</>;
+  return <>{t} GST</>;
 }
 
 // -----------------------------------------------------------------
@@ -628,7 +639,7 @@ function PwHero() {
           </h1>
 
           <a className="pw-hero__role" href="https://energyiq.de" target="_blank" rel="noreferrer">
-            <span className="pw-hero__role-dot pw-pulse">●</span>
+            <span className="pw-hero__role-dot pw-bolt"><i className="fas fa-bolt" /></span>
             <span>Founding Engineer <span className="pw-hero__role-at">@</span> <strong>EnergyIQ</strong></span>
             <span className="pw-hero__role-arrow">energyiq.de ↗</span>
           </a>
@@ -661,8 +672,7 @@ function PwHero() {
       {/* Full-width gauge cluster row — sits below the 2-col hero grid */}
       <Reveal className="pw-hero__cluster">
         <p className="pw-cluster-intro">
-          A little side-quest: I wanted to simulate and play around with racing behaviours
-          for fun. Pick a mode and watch the tach and speedo work together like a real car.
+          This is a simulation of a stock Gen-1 GT86.
         </p>
         <ClusterControls mode={simMode} setMode={setSimMode} />
         <LiveCluster mode={simMode} />
@@ -816,10 +826,9 @@ function PwMotor() {
           <div className="pw-motor__heroOverlay">
             <div>
               <div className="pw-motor__plate">★ DXB N 13557</div>
-              <h3 className="pw-motor__title">The 86.</h3>
+              <h3 className="pw-motor__title">The Machi.</h3>
               <p className="pw-motor__sub">
-                Every mod on this 86 is in service of a feeling: <em style={{ color: '#ffc266', fontStyle: 'normal' }}>lighter, nimbler, more responsive</em>.
-                Something that feels like a gokart. Something that can cut through corners and turns like a Japanese blade. Nothing else get's me closer to that feeling than a manual GT86.
+                I've always loved small, light, and nimble cars. Very few cars nowadays scratch that itch, the feeling of how driving felt in a video game. My GT86 is my attempt at that. I am steadily and, I think, thoughtfully <em style={{ color: '#ffc266', fontStyle: 'normal' }}>modding it out</em> to resemble what I think driving should feel like. More than anything, I want to smile every moment I am driving it.
               </p>
             </div>
             <div className="pw-motor__readout">
@@ -872,9 +881,7 @@ function PwRange() {
         meta={<><div>NEXT WAYPOINT</div><div style={{ color: '#ffc266' }}>KAZBEK · 5,054 m</div></>}
       />
       <Reveal as="p" className="pw-section__intro">
-        Self-taught mountaineer in the way 28-year-olds claim things. The reality:
-        Kazbegi, Fuji, Hokkaido, and a long queue of summits filed under "next trip."
-        I will pose in front of every one of them.
+        I happen to pose infront of mountains.
       </Reveal>
 
       <Reveal className="pw-range__viewport">
@@ -950,7 +957,7 @@ function PwLetters() {
             <h4 className="pw-letter__title">{p.title}</h4>
             <p className="pw-letter__desc">{p.desc}</p>
             <div className="pw-letter__foot">
-              <span>by Fardin Ahsan</span>
+              <span></span>
               <span className="pw-letter__read">read ↗</span>
             </div>
           </a>
@@ -980,27 +987,22 @@ function PwOpenChannel() {
       <PwSectionHead
         idx="05"
         kicker="HAIL.OPEN · ready to transmit"
-        title="Open a "
-        italic="channel."
-        meta={<><div>STATUS · LISTENING</div><div style={{ color: '#7fd4e6' }}><span className="pw-pulse">●</span> CHANNEL READY</div></>}
+        title="Let’s "
+        italic="talk!"
+        meta={null}
       />
 
       <Reveal className="pw-contact">
         <div className="pw-contact__hailing">
-          <div className="pw-contact__kicker">
-            <span className="pw-pulse">●</span> HAILING FREQUENCY OPEN
-          </div>
           <h3 className="pw-contact__big">
-            Wanted: conversations about LLMs, embeddings,<br /> badminton, and any <em>mountain road</em><br /> within six hours of Dubai.
+            Talk to me about anything! Want to work on something?<br /> Want to <em>discuss an idea?</em><br /> Want to brainstorm something?
           </h3>
           <p className="pw-contact__body">
-            Eight channels. Pick whichever is fastest for you. Replies are usually within
-            a day — sometimes from the driver’s seat of a parked GT 86.
+            Replies usually within minutes. Often from the driver’s seat of a parked GT 86.
           </p>
 
           <div className="pw-avail">
             <div className="pw-avail__head">
-              <span><span className="pw-pulse">●</span>&nbsp;&nbsp;AVAILABLE TO MEET</span>
               <span className="pw-avail__src">GST · base</span>
             </div>
             <div className="pw-avail__grid">
@@ -1028,7 +1030,7 @@ function PwOpenChannel() {
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
-            <a className="pw-btn pw-btn--filled" href="mailto:fardinahsan146@gmail.com">drop a line ↗</a>
+            <a className="pw-btn pw-btn--filled" href="mailto:fardinahsan146@gmail.com">DROP AN EMAIL ↗</a>
             <a className="pw-btn pw-btn--amber" href="https://calendly.com/fardinahsan146/30min" target="_blank" rel="noreferrer">book 30 min ↗</a>
           </div>
         </div>
@@ -1053,9 +1055,7 @@ function PwOpenChannel() {
 function PwFoot() {
   return (
     <footer className="pw-foot">
-      <div>◉ FARDIN AHSAN</div>
-      <div className="pw-foot__center">© 2026 · All channels open · Printed in Dubai · 印刷</div>
-      <div>v.28 · {new Date().toLocaleDateString('en-GB')}</div>
+      <div className="pw-foot__center">© Fardin Ahsan</div>
     </footer>
   );
 }
@@ -1068,7 +1068,6 @@ function PwApp() {
     <div className="pw-app">
       <PwNav />
       <PwHero />
-      <PwTicker />
       <PwBuildLog />
       <PwMotor />
       <PwRange />
