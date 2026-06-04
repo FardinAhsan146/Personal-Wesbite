@@ -1,0 +1,25 @@
+{
+  "name": "personal-wesbite",
+  "version": "1.0.0",
+  "description": "A dark, telemetry-dashboard personal site: an instrument-cluster hero with live analog gauges (a working tach + speedo driving simulator), plus sections for software projects, the GT 86, mountains, writing, and contact.",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FardinAhsan146/Personal-Wesbite.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/FardinAhsan146/Personal-Wesbite/issues"
+  },
+  "homepage": "https://github.com/FardinAhsan146/Personal-Wesbite#readme",
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}

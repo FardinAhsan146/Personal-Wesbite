@@ -404,9 +404,10 @@ function useSlowClock(fps, paused) {
 
 // Decorative "vibe" mini-gauges — slow time-based sines, throttled to ~15fps and frozen
 // under prefers-reduced-motion. Purely ornamental (aria-hidden), isolated from the sim loop.
-function VibeGauges() {
+function VibeGauges({ active = true }) {
   const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  useSlowClock(15, reduce);
+  // Pause the 15fps repaint when reduced-motion is set OR the cluster is off-screen.
+  useSlowClock(15, reduce || !active);
   const ph = reduce ? 6 : performance.now() / 1000;              // seconds; frozen pose when reduced
   const wave = (f, a, off = 0) => a * Math.sin(ph * f + off);
   const focus = 78 + wave(0.48, 12, 1.4);
@@ -442,6 +443,15 @@ function LiveCluster({ mode }) {
   const leds = useRef([]);
   const thrBar = useRef(null), brkBar = useRef(null), cluBar = useRef(null);
   const gBall = useRef(null), slipLamp = useRef(null);
+  const rowRef = useRef(null);
+
+  // On-screen gate — the physics loop and the vibe gauges only do work while the
+  // cluster is actually in view. Scrolling past it on a phone otherwise keeps a
+  // 60fps physics + SVG-write loop running and contends with scroll. `visible`
+  // (state) pauses the decorative VibeGauges; `visibleRef` is read inside the rAF
+  // closure without forcing a per-frame re-render.
+  const [visible, setVisible] = useState(true);
+  const visibleRef = useRef(true);
 
   const CXT = 200, CYT = 200;   // tach size 400 → centre 200
   const CXS = 140, CYS = 140;   // speedo size 280 → centre 140
@@ -510,12 +520,29 @@ function LiveCluster({ mode }) {
     }
   }, [mode]);
 
+  // Track whether the cluster is on-screen. rootMargin pre-arms it just before
+  // it scrolls into view so the needles aren't frozen on arrival.
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((entries) => {
+      const on = entries[0].isIntersecting;
+      visibleRef.current = on;
+      setVisible(on);
+    }, { rootMargin: '200px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   // The single physics + render loop (skipped entirely for reduced-motion users).
   useEffect(() => {
     if (reduceRef.current) return;
     let raf, last = performance.now(), acc = 0, alive = true;
     const frame = (now) => {
       if (!alive) return;
+      // Off-screen: do no physics or DOM writes — just keep the clock current so
+      // dt doesn't spike on return. (rAF is already throttled when the tab hides.)
+      if (!visibleRef.current) { last = now; acc = 0; raf = requestAnimationFrame(frame); return; }
       const dt = Math.min((now - last) / 1000, DT_CLAMP); last = now; acc += dt;
       const s = sim.current, ctrl = DRIVERS[modeRef.current] || DRIVERS.PULL;
       let guard = 0;
@@ -530,7 +557,7 @@ function LiveCluster({ mode }) {
   return (
     <>
       <PwShiftLights ledsRef={leds} />
-      <div className="pw-hero__cluster-row" role="img" aria-label="Live Toyota GT86 instrument cluster — tachometer and speedometer driven by a real-time physics simulation">
+      <div ref={rowRef} className="pw-hero__cluster-row" role="img" aria-label="Live Toyota GT86 instrument cluster — tachometer and speedometer driven by a real-time physics simulation">
         <window.PWSpeedo value={0} max={260} size={280} needleRef={spdNeedle} digitRef={spdDigit} />
         <window.PWTach value={SIM_IDLE} max={9000} redline={7400} size={400} gear={1} needleRef={tachNeedle} gearRef={tachGear} />
         <div className="pw-cluster-side">
@@ -543,7 +570,7 @@ function LiveCluster({ mode }) {
           </div>
         </div>
       </div>
-      <VibeGauges />
+      <VibeGauges active={visible} />
     </>
   );
 }
@@ -658,7 +685,7 @@ function PwHero() {
         {/* RIGHT — portrait */}
         <div className="pw-portrait">
           <div className="pw-portrait__photo">
-            <img src="assets/portrait-georgia.jpg" alt="Fardin Ahsan" />
+            <img src="assets/portrait-georgia.jpg" alt="Fardin Ahsan" decoding="async" fetchPriority="high" />
             <div className="pw-id-card__corner pw-id-card__corner--tl" />
             <div className="pw-id-card__corner pw-id-card__corner--tr" />
             <div className="pw-id-card__corner pw-id-card__corner--bl" />
@@ -742,7 +769,7 @@ function PwBuildLog() {
         'No YouTube API credentials required',
       ],
       use: (<>“I made this to talk to <a href="https://www.youtube.com/@japaneat" target="_blank" rel="noreferrer" style={{ color: '#ffc266' }}>japaneat</a> before my trip to Japan. A lot of knowledge isn't searchable by text. It lives in YouTube videos.”</>),
-      image: 'assets/talk-to-youtuber.gif',
+      image: 'assets/talk-to-youtuber.webp',
       stack: 'PY · CHROMA · GPT',
       url: 'https://github.com/FardinAhsan146/TalkToYoutuber',
     },
@@ -758,7 +785,7 @@ function PwBuildLog() {
         'Persistent vector DB for faster repeat queries',
       ],
       use: '“I used it to search a Serbian news channel with 30,000 videos for content related to horses, just by their thumbnails.”',
-      image: 'assets/youtube-thumbnail-search.gif',
+      image: 'assets/youtube-thumbnail-search.webp',
       stack: 'PY · CLIP · CHROMA',
       url: 'https://github.com/FardinAhsan146/YoutubeThumbnailSearch',
     },
@@ -783,7 +810,7 @@ function PwBuildLog() {
         {projects.map((p) => (
           <article key={p.name} className="pw-project">
             <div className="pw-project__media">
-              <img src={p.image} alt={p.name} />
+              <img src={p.image} alt={p.name} loading="lazy" decoding="async" />
               <div className="pw-project__tag">{p.tag}</div>
             </div>
             <div className="pw-project__body">
@@ -822,7 +849,7 @@ function PwMotor() {
 
       <Reveal className="pw-motor pw-reveal-stagger" stagger>
         <div className="pw-motor__hero">
-          <img src="assets/gt86-garage.jpeg" alt="Fardin's orange Toyota GT 86 on the lift in Dubai" />
+          <img src="assets/gt86-garage.jpeg" alt="Fardin's orange Toyota GT 86 on the lift in Dubai" loading="lazy" decoding="async" />
           <div className="pw-motor__heroOverlay">
             <div>
               <div className="pw-motor__plate">★ DXB N 13557</div>
@@ -848,7 +875,7 @@ function PwMotor() {
 
         <div className="pw-motor__side">
           <div className="pw-motor__card">
-            <img src="assets/kart.jpeg" alt="Karting" />
+            <img src="assets/kart.jpeg" alt="Karting" loading="lazy" decoding="async" />
             <div className="pw-motor__cardLabel">
               CIRCUIT · KARTDROME
               <small>Dubai Kartdrome · every chance I get · best lap 1:21.2</small>
@@ -888,7 +915,7 @@ function PwRange() {
         <div className="pw-range__track">
           {photos.concat(photos).map((p, i) => (
             <div key={i} className="pw-range__card">
-              <img src={p.src} alt={p.loc} />
+              <img src={p.src} alt={p.loc} loading="lazy" decoding="async" />
               <div className="pw-range__cardOverlay">
                 <div className="pw-range__coord">▲ {p.coord}</div>
                 <div className="pw-range__cap">{p.cap}</div>

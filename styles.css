@@ -1066,6 +1066,21 @@ a:hover { color: var(--pw-fg); }
 @media (max-width: 760px) {
   :root { --pw-page-pad: 18px; }
 
+  /* --- Mobile compositing budget ---
+     A fixed, full-viewport blurred nav over two fixed full-screen overlays
+     forces the GPU to re-composite the whole viewport on every scroll frame —
+     the main source of scroll jank on phones. Trim it down:
+     • nav: solid translucent bg, no backdrop blur
+     • grid overlay: scroll with the page (paint once) instead of fixed (repaint per frame)
+     • scanline/blend overlay: drop entirely (it's ~1.4% white, invisible on a phone) */
+  .pw-nav {
+    background: rgba(12, 13, 16, 0.94);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .pw-app::before { position: absolute; }
+  .pw-app::after { display: none; }
+
   /* --- Nav: brand + clock + hamburger; links drop down --- */
   .pw-nav { flex-wrap: nowrap; align-items: stretch; }
   .pw-nav__cell--brand { margin-right: auto; border-right: 0; font-size: 11px; }

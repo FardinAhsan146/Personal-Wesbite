@@ -109,9 +109,6 @@ function PWTach({ value, max = 9000, redline = 7000, size = 360, label = 'RPM ×
           <stop offset="0.7" stopColor="#cfd5dd" />
           <stop offset="1" stopColor="#ff5a3c" />
         </linearGradient>
-        <filter id="pw-needle-shadow" x="-10%" y="-10%" width="120%" height="120%">
-          <feGaussianBlur stdDeviation="2" />
-        </filter>
       </defs>
 
       {/* Outer bezel */}
@@ -220,10 +217,12 @@ function PWTach({ value, max = 9000, redline = 7000, size = 360, label = 'RPM ×
 
       {/* Needle — driven imperatively via needleRef (transform-box-proof 3-arg rotate, no transition) */}
       <g ref={needleRef} transform={`rotate(${angle} ${cx} ${cy})`} style={{ willChange: 'transform' }}>
-        {/* Shadow */}
+        {/* Shadow — static offset polygon (no blur filter: blur re-rasterizes
+            every frame as the needle rotates, which is very expensive on
+            mobile GPUs). A slightly softer dark fill reads the same in motion. */}
         <polygon
           points={`${needleBackX},${needleBackY - 2} ${cx},${cy - 6} ${needleTipX},${needleTipY} ${cx},${cy + 6} ${needleBackX},${needleBackY + 2}`}
-          fill="rgba(0,0,0,0.55)" filter="url(#pw-needle-shadow)" transform="translate(2,2)"
+          fill="rgba(0,0,0,0.45)" transform="translate(2,2)"
         />
         {/* Body */}
         <polygon
