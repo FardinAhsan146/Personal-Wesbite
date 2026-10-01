@@ -21,8 +21,16 @@ via Babel standalone, so you can edit and refresh directly.
 
 - **Content / copy** — edit the relevant component in `app.jsx`.
 - **Styling** — edit `styles.css` (colors live in the `:root` token block).
-- **Gauge behaviour** — the driving-sim modes (`PULL`, `ENG_BRAKE`, `LAUNCH`,
-  `TRACK`, `LIMITER`, `BURNOUT`, `IDLE`) are defined in the `SIMS` object in `app.jsx`.
+- **Gauge behaviour** — the GT86 simulation lives in `app.jsx` between the
+  `// <PW-SIM-CORE>` and `// </PW-SIM-CORE>` markers: plain JS (no JSX/DOM), so it
+  can be lifted out and run headless in Node. Vehicle constants and the FA20
+  torque curve are at the top; `pwPhysics` is the engine / clutch-driveline /
+  tyre / brake model; each driving mode (`PULL`, `ENG_BRAKE`, `LAUNCH`, `TRACK`,
+  `LIMITER`, `BURNOUT`, `IDLE`) is a `SEEDS` entry (starting state) plus a
+  `DRIVERS` entry (pedals, clutch and gear lever only — physics does the rest).
+  `pwViewStep` holds the needle dynamics. `LiveCluster` runs it all on a fixed
+  120 Hz tick in one rAF loop (paused off screen / in hidden tabs) and writes the
+  DOM imperatively; needles are separate SVG layers rotated with CSS transforms.
 
 Save and refresh — no compile step.
 

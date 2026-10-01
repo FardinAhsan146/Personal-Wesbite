@@ -129,18 +129,18 @@ function PwNav() {
   );
 }
 
-// Live Dubai (GST · UTC+4) clock for the nav.
+// Live Dubai (GST · UTC+4) clock for the nav. Formatter built once, not every tick.
+const PW_DXB_FMT = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+  hour12: false, timeZone: 'Asia/Dubai',
+});
 function DxbClock() {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-  const t = new Intl.DateTimeFormat('en-GB', {
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false, timeZone: 'Asia/Dubai',
-  }).format(now);
-  return <>{t} GST</>;
+  return <>{PW_DXB_FMT.format(now)} GST</>;
 }
 
 // -----------------------------------------------------------------
@@ -150,174 +150,401 @@ function DxbClock() {
 // -----------------------------------------------------------------
 
 // ─── GT86 driveline physics — real-time longitudinal model ───────────────
-// Replaces the old keyframe sim with a force-integrated model. Engine RPM is
-// SLAVED to wheel speed through the gearing whenever the clutch is locked, so
-// the tach and speedo are physically incapable of drifting apart. Driver
-// "controllers" emit only pedal/gear inputs; step() integrates F = ma. Real
-// FA20/ZN6 numbers (verified): 0-100 ~7-8.5 s, top ~218 km/h (aero-limited in
-// overdrive 6th), per-gear redline tops 57/95/134/171/207 km/h.
+// <PW-SIM-CORE> Everything down to </PW-SIM-CORE> is plain JS (no JSX, DOM or
+// React) operating on a plain state object, so it can be lifted out and run
+// headless. One fixed 120 Hz tick = driver controller → 4 physics sub-steps.
+//
+// Three bodies, three couplings:
+//   engine + flywheel (IE) ─[clutch → compliant driveline]─ rear wheels (IWR) ─[tyre]─ car (MCAR)
+//   • Clutch/driveline: a torsional spring-damper (half-shafts, diff, sidewalls)
+//     whose torque is capped by clutch capacity — over the cap the clutch slips.
+//     Shift shunt, clutch-dump wind-up and the in-gear limiter "buck" all fall
+//     out of this instead of being scripted.
+//   • Tyre: stick/slip friction impulse, capacity μ·Fz_rear (load transfer +
+//     friction circle vs lateral g); sliding μ falls off with slip speed.
+//   • Brakes (front force + rear torque, ABS-capped) and rolling resistance are
+//     friction impulses too — they can stop the car but never reverse it.
+// The tach reads crank speed, the speedo reads REAR (driven) wheel speed — so
+// a burnout shows ~55 km/h on a car doing walking pace, like the real thing.
+//
+// Real FA20/ZN6 numbers in → this out (headless check): 0-100 ≈ 7.5 s (needs
+// 3rd), redline gear tops 59/97/138/175/212 km/h, ~230 km/h top in 6th.
 const PW_PI = Math.PI, A2R = 60 / (2 * PW_PI), R2A = 1 / A2R;       // rad/s <-> rpm
-const SIM_RATIOS  = [3.626, 2.188, 1.541, 1.213, 1.000, 0.767];    // ZN6 6MT gears
-const SIM_FINAL   = 4.10;                                          // final drive (pre-facelift)
-const SIM_TYRE_C  = 1.91;                                          // 215/45R17 effective loaded circ, m
-const RW = SIM_TYRE_C / (2 * PW_PI);                               // rolling radius ≈ 0.304 m
-const SIM_REDLINE = 7400, FUELCUT = 7450, HYST = 200, SIM_IDLE = 820, STALL = 420;
-const PW_M = 1250, PW_EFF = 0.88, RHO = 1.225, PW_CD = 0.27, PW_AREA = 1.97;
-const CDRAG = 0.5 * RHO * PW_CD * PW_AREA, CRR = 0.012, PW_G = 9.81;
-const IE = 0.115, IW = 1.05;                                       // engine / wheel rotational inertia, kg·m²
-const B0 = 12, B1 = 0.025, B2 = 0.00006;                          // FA20 motoring friction (on rad/s)
-const MU = 1.25, MU_BURN = 0.42, REAR_LAUNCH = 0.74, REAR_ROLL = 0.50;
-const BRAKE_MAX = 11000, CLUTCH_CAP = 360;
-const FIXED = 1 / 120, DT_CLAMP = 0.05;                            // physics timestep / max frame dt
+const PW_G = 9.81;
+const SIM_RATIOS  = [3.626, 2.188, 1.541, 1.213, 1.000, 0.767];    // ZN6 TL70 6MT
+const SIM_FINAL   = 4.10;                                          // final drive (EU/AU 6MT; US is 4.30)
+const RW = 0.310;                                                  // 215/45R17 dynamic rolling radius, m
+const SIM_REDLINE = 7400, SHIFT_RPM = 7250, SIM_IDLE = 780;        // dial redline, driver's shift point, idle target
+const FUELCUT = 7450, FC_RESUME = 7100;                            // hard fuel-cut limiter + re-light hysteresis
+const PW_M = 1325;                                                 // 1250 kg kerb + 75 kg driver
+const WF = 0.53, CG_H = 0.46, WB = 2.57;                           // front weight share, CG height, wheelbase (m)
+const IE = 0.12, IWR = 2.0, I_FRONT = 1.7;                         // crank+flywheel+clutch, rear axle, front wheels (kg·m²)
+const MCAR = PW_M + I_FRONT / (RW * RW);                           // translating mass incl. free-rolling front wheels
+const PW_EFF = 0.86;                                               // gearbox + diff efficiency
+const CDA_K = 0.5 * 1.225 * 0.29 * 2.05;                           // ½·ρ·Cd·A
+const CRR0 = 0.013, CRR2 = 1.8e-6;                                 // rolling resistance, grows with v²
+const MU_PK = 1.10;                                                // peak tyre μ (summer tyre)
+const CLUTCH_CAP = 330, BRAKE_F = 16000, BIAS_F = 0.70;           // Nm; N at full pedal; front brake share
+const K_DL = 9000, Z_DL = 0.3;                                     // driveline torsional stiffness at the wheels (Nm/rad), damping ratio
+const FIXED = 1 / 120, SUBSTEPS = 4, DT_CLAMP = 0.1, MAX_STEPS = 12; // tick, sub-steps, max frame dt, catch-up cap
 const pwClamp = (x, a, b) => (x < a ? a : x > b ? b : x);
 
-// FA20 torque curve (Nm) — note the famous D-4S mid-range dip at ~4000 rpm.
-const TQ_PAIRS = [[1000, 130], [2000, 178], [3000, 192], [3500, 182], [4000, 172], [4500, 182], [5000, 195], [6000, 202], [6400, 205], [7000, 200], [7400, 188]];
-const TQ250 = new Float32Array(31);                               // resampled 0..7500 rpm @ 250 for O(1) lookup
-for (let i = 0; i <= 30; i++) {
-  const rpm = i * 250; let v;
-  if (rpm <= TQ_PAIRS[0][0]) v = TQ_PAIRS[0][1] * Math.max(0.35, rpm / TQ_PAIRS[0][0]);
-  else if (rpm >= TQ_PAIRS[TQ_PAIRS.length - 1][0]) v = TQ_PAIRS[TQ_PAIRS.length - 1][1];
-  else for (let k = 1; k < TQ_PAIRS.length; k++) {
-    if (rpm <= TQ_PAIRS[k][0]) { const [r0, t0] = TQ_PAIRS[k - 1], [r1, t1] = TQ_PAIRS[k]; v = t0 + (t1 - t0) * (rpm - r0) / (r1 - r0); break; }
+// Per-gear overall ratio, driveline stiffness & damping referred to the crank.
+const PW_GR = [0], PW_KE = [0], PW_CE = [0];
+for (let g = 1; g <= 6; g++) {
+  const G = SIM_RATIOS[g - 1] * SIM_FINAL, J = (MCAR * RW * RW + IWR) / (G * G), Ieff = IE * J / (IE + J);
+  PW_GR[g] = G; PW_KE[g] = K_DL / (G * G); PW_CE[g] = 2 * Z_DL * Math.sqrt(PW_KE[g] * Ieff);
+}
+
+// FA20 full-load crank torque (Nm): 205 Nm @ 6400-6600, ~200 hp @ 7000, and the
+// infamous mid-range dip around 3800-4400. Monotone-cubic resampled every 50 rpm.
+const TQ_PTS = [[0, 60], [600, 95], [1000, 125], [1500, 150], [2000, 170], [2500, 182], [3000, 190], [3500, 186], [3800, 178], [4100, 174], [4400, 177], [4700, 184], [5000, 192], [5500, 199], [6000, 202], [6400, 205], [6600, 205], [7000, 203], [7400, 193], [7800, 175], [8000, 165]];
+const TQ_STEP = 50, TQ_N = 160, TQ_TAB = new Float32Array(TQ_N + 1);
+(function buildTorqueTable() {
+  const n = TQ_PTS.length, x = TQ_PTS.map((p) => p[0]), y = TQ_PTS.map((p) => p[1]), d = [], m = [];
+  for (let i = 0; i < n - 1; i++) d[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]);
+  m[0] = d[0]; m[n - 1] = d[n - 2];
+  for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+  for (let i = 0; i < n - 1; i++) {                                 // Fritsch–Carlson: no overshoot between points
+    if (d[i] === 0) { m[i] = m[i + 1] = 0; continue; }
+    const a = m[i] / d[i], b = m[i + 1] / d[i], h = a * a + b * b;
+    if (h > 9) { const t = 3 / Math.sqrt(h); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i]; }
   }
-  TQ250[i] = v;
-}
-function torqueAt(rpm) { if (rpm <= 0) return TQ250[0]; const f = (rpm / 250) | 0; if (f >= 30) return TQ250[30]; const a = (rpm - f * 250) / 250; return TQ250[f] + (TQ250[f + 1] - TQ250[f]) * a; }
-
-const ovr = (g) => (g >= 1 ? SIM_RATIOS[g - 1] * SIM_FINAL : 0);   // overall ratio (0 = neutral)
-const rpmFromV = (v, g) => Math.abs(v) / RW * ovr(g) * A2R;        // THE LOCK INVARIANT (wheel speed → engine rpm)
-const gearRpm = (kmh, g) => rpmFromV(kmh / 3.6, g);
-const meff = (g) => PW_M + (IE * ovr(g) * ovr(g) + IW) / (RW * RW); // effective mass incl. rotating inertia
-const pwRamp = (v) => pwClamp(v / 0.3, -1, 1);                      // smooth sign near v=0
-const along = (t, pts) => { if (t <= pts[0][0]) return pts[0][1]; for (let i = 1; i < pts.length; i++) { if (t <= pts[i][0]) { const [t0, v0] = pts[i - 1], [t1, v1] = pts[i]; return v0 + (v1 - v0) * ((t - t0) / (t1 - t0)); } } return pts[pts.length - 1][1]; };
-const gearFor = (kmh) => { for (let g = 1; g <= 6; g++) if (gearRpm(kmh, g) <= SIM_REDLINE) return g; return 6; };
-const TRACK_PTS = [[0, 52], [5.5, 138], [8, 70], [10.5, 112], [15, 158], [17.5, 76], [20, 52]];        // hot-lap speed profile, km/h
-const LAT_PTS = [[0, 0], [2, 0.35], [5.2, 0.1], [8, -1.05], [9.6, -0.5], [10.6, 0.25], [13.5, 0.95], [16.5, 0.2], [17.6, -1.0], [19, -0.35], [20, 0]]; // lateral g through the lap
-
-// Exact-exponential damper toward a target — unconditionally stable analog needle feel.
-const pwDamp = (n, target, halflife, dt) => { n.x = target + (n.x - target) * Math.exp(-0.6931472 * dt / Math.max(1e-3, halflife)); return n.x; };
-
-function makeSim() { return { v: 0, we: SIM_IDLE * R2A, gear: 1, clutch: 1, wheelspin: false, wheelW: 0, fuelCut: false, throttle: 0, brake: 0, shiftT: 0, blipTo: 0, toGear: 0, gearFlash: 0, slipping: false, launchHold: 0, _launched: false, _coast: false, aLong: 0, aLat: 0, prevV: 0, modeT: 0 }; }
-
-// One physics sub-step (semi-implicit Euler): clutch state machine OPEN / SLIP / WHEELSPIN / LOCKED.
-function integrate(s, h) {
-  let rpm = (s.gear > 0 && s.clutch >= 0.999 && !s.wheelspin) ? Math.max(SIM_IDLE, rpmFromV(s.v, s.gear)) : s.we * A2R;
-  if (rpm >= FUELCUT) s.fuelCut = true; if (rpm <= SIM_REDLINE - HYST) s.fuelCut = false;
-  let effThr = s.throttle;
-  if (s.gear === 0 || s.clutch < 0.5) { const idleThr = pwClamp(0.0032 * (SIM_IDLE - rpm), 0, 0.45); effThr = Math.max(s.throttle, idleThr); }
-  const Tcomb = s.fuelCut ? 0 : effThr * torqueAt(Math.min(rpm, FUELCUT));
-  const Tfric = B0 + B1 * s.we + B2 * s.we * s.we;
-  const Tnet = Tcomb - Tfric;
-  const Faero = -CDRAG * s.v * Math.abs(s.v), Froll = -CRR * PW_M * PW_G * pwRamp(s.v), Fbrk = (s.v > 0.05 ? -s.brake * BRAKE_MAX : 0);
-  const w_in = rpmFromV(s.v, s.gear) / A2R;                        // driveline rad/s referred to engine
-  const cap = MU * PW_M * PW_G * ((s.gear <= 2 && s.v * 3.6 < 40) ? REAR_LAUNCH : REAR_ROLL);
-  s.slipping = false;
-  if (s.gear === 0 || s.clutch < 0.02) {                           // OPEN — engine free, wheels coast
-    s.we += Tnet / IE * h; s.we = Math.max(STALL * R2A, s.we);
-    s.v += (Faero + Froll + Fbrk) / (PW_M + IW / (RW * RW)) * h; s.wheelspin = false; s.slipping = true;
-  } else if (s.clutch < 0.999) {                                   // CLUTCH SLIP — launch / shift
-    s.slipping = true;
-    if (s.launchHold > 0) {                                        // feathered launch: hold revs in powerband, lock when wheels catch up
-      s.we = s.launchHold * R2A;
-      const Ft = pwClamp(torqueAt(s.launchHold) * ovr(s.gear) * PW_EFF / RW, 0, cap);
-      s.v += (Ft + Faero + Froll + Fbrk) / meff(s.gear) * h;
-      if (rpmFromV(s.v, s.gear) >= s.launchHold - 40) { s.clutch = 1; s.launchHold = 0; s.wheelspin = false; s.we = Math.max(SIM_IDLE * R2A, rpmFromV(s.v, s.gear) * R2A); }
-    } else {
-      const Tclutch = CLUTCH_CAP * s.clutch * Math.sign(s.we - w_in || 1);
-      s.we += (Tnet - Tclutch) / IE * h; s.we = Math.max(STALL * R2A, s.we);
-      const Ft = pwClamp(Tclutch * ovr(s.gear) * PW_EFF / RW, -cap, cap);
-      s.v += (Ft + Faero + Froll + Fbrk) / meff(s.gear) * h;
-    }
-  } else if (s.wheelspin) {                                        // WHEELSPIN / BURNOUT — clutch locked, tyres sliding
-    s.slipping = true;
-    const capB = MU_BURN * PW_M * PW_G * REAR_ROLL;
-    const Ispin = IE + IW / (ovr(s.gear) * ovr(s.gear));
-    const groundReac = capB * RW / (ovr(s.gear) * PW_EFF);
-    s.we += (Tnet - groundReac) / Ispin * h; s.we = Math.max(STALL * R2A, s.we);
-    s.wheelW = s.we / ovr(s.gear);
-    s.v += (capB + Faero + Froll + Fbrk) / PW_M * h; if (s.v < 0) s.v = 0;
-    if (s.wheelW * RW <= s.v + 0.5) { s.wheelspin = false; s.we = Math.max(SIM_IDLE * R2A, rpmFromV(s.v, s.gear) * R2A); }
-  } else {                                                         // LOCKED — one rigid body, engine SLAVED to v
-    const Fd = Tnet * ovr(s.gear) * PW_EFF / RW, Ft = pwClamp(Fd, -cap, cap);
-    if (Fd > cap + 50 && s.throttle > 0.5) { s.wheelspin = true; s.wheelW = s.v / RW; }
-    s.v += (Ft + Faero + Froll + Fbrk) / meff(s.gear) * h;
-    s.we = Math.max(SIM_IDLE * R2A, rpmFromV(s.v, s.gear) * R2A);  // <<< tach can't desync from speedo
+  for (let k = 0, i = 0; k <= TQ_N; k++) {
+    const r = k * TQ_STEP; while (i < n - 2 && r > x[i + 1]) i++;
+    const h = x[i + 1] - x[i], t = pwClamp((r - x[i]) / h, 0, 1), t2 = t * t, t3 = t2 * t;
+    TQ_TAB[k] = (2 * t3 - 3 * t2 + 1) * y[i] + (t3 - 2 * t2 + t) * h * m[i] + (-2 * t3 + 3 * t2) * y[i + 1] + (t3 - t2) * h * m[i + 1];
   }
-  if (s.v < 0) s.v = 0;
-  if (!Number.isFinite(s.v)) s.v = 0; if (!Number.isFinite(s.we)) s.we = SIM_IDLE * R2A;
-  s.we = pwClamp(s.we, STALL * R2A, (FUELCUT + 200) * R2A); s.v = pwClamp(s.v, 0, 330 / 3.6);
-}
-// Advance one frame: sub-step 4× when slipping / on the limiter for stiff-term stability.
-function pwStep(s, dt) {
-  const N = (s.slipping || s.fuelCut) ? 4 : 1, h = dt / N;
-  for (let i = 0; i < N; i++) integrate(s, h);
-  s.aLong = (s.v - s.prevV) / dt / PW_G; s.prevV = s.v;
-  s.aLat *= 0.86;                                                  // decays unless a controller (TRACK) keeps writing it
-  s.gearFlash = Math.max(0, s.gearFlash - dt);
-  if (s.shiftT > 0) s.shiftT = Math.max(0, s.shiftT - dt);
-}
-// Value shown on the tach: slaved rpm when locked, free engine speed otherwise.
-function dispRpm(s) { return (s.gear > 0 && s.clutch >= 0.999 && !s.wheelspin) ? Math.max(SIM_IDLE, rpmFromV(s.v, s.gear)) : s.we * A2R; }
+})();
+function pwTorque(rpm) { const f = rpm / TQ_STEP; if (f <= 0) return TQ_TAB[0]; if (f >= TQ_N) return TQ_TAB[TQ_N]; const i = f | 0; return TQ_TAB[i] + (TQ_TAB[i + 1] - TQ_TAB[i]) * (f - i); }
+// Motoring (friction + closed-throttle pumping) torque on rad/s: ~14 Nm at idle, ~57 Nm at 7000.
+const pwFric = (w) => 12 + 0.025 * w + 0.00005 * w * w;
+// Throttle plate → cylinder filling: small openings fill the engine at low rpm, need more at high rpm.
+function pwLoad(thr, rpm) { if (thr <= 0) return 0; if (thr >= 1) return 1; const a = 1.5 + 9000 / Math.max(rpm, 700); return (1 - Math.exp(-a * thr)) / (1 - Math.exp(-a)); }
+// Deterministic xorshift noise (idle combustion jitter) so headless runs repeat exactly.
+function pwRand(s) { let x = s.seed | 0; x ^= x << 13; x ^= x >>> 17; x ^= x << 5; s.seed = x; return (x >>> 0) / 4294967296; }
 
-// Shift state machine — controllers request, serviceShift carries it out (clutch out, swap, blip).
-function requestUpshift(s) { if (s.gear < 6 && s.shiftT <= 0) { s.clutch = 0; s.shiftT = 0.10; s.toGear = s.gear + 1; s.blipTo = 0; } }
-function requestDownshift(s, kmh) { if (s.gear > 1 && s.shiftT <= 0) { s.clutch = 0; s.shiftT = 0.20; s.toGear = s.gear - 1; s.blipTo = gearRpm(kmh, s.gear - 1); } }
-function serviceShift(s, dt) { if (s.shiftT > 0) { s.throttle = s.blipTo ? 0.85 : 0; if (s.shiftT <= dt + 1e-9) { s.gear = s.toGear; s.clutch = 1; s.gearFlash = 0.12; s.we = Math.max(SIM_IDLE * R2A, rpmFromV(s.v, s.gear) * R2A); s.blipTo = 0; } return true; } return false; }
+function makeSim() {
+  return {
+    v: 0, ww: 0, we: SIM_IDLE * R2A, tw: 0,                        // car m/s · rear wheel rad/s · crank rad/s · driveline twist (rad, crank side)
+    gear: 0, gearDisp: 1, clutch: 1, throttle: 0, brake: 0,         // driver inputs (clutch = engagement 0..1); gearDisp 0 = N
+    thrEff: 0, comb: 1, fuelCut: false, iscI: 0, noise: 0, acT: 0, seed: 0x2f6e2b1, tcs: 1, tcsOn: true,
+    slide: false, cSlip: false, slipping: false, slipV: 0,
+    aLong: 0, aFilt: 0, aLat: 0, prevV: 0, gearFlash: 0,
+    sh: null, ph: 0, modeT: 0, t: 0, trackX: 0, tLaunch: 0, t100: 0,
+  };
+}
+
+// One physics sub-step of length h (s).
+function pwPhysics(s, h) {
+  const g = s.gear, G = PW_GR[g], rpm = s.we * A2R;
+
+  // Throttle plate: opens fast, closes a little lazily (the FA20's emissions "rev hang").
+  s.thrEff += (s.throttle - s.thrEff) * (1 - Math.exp(-h / (s.throttle > s.thrEff ? 0.05 : 0.08)));
+  // Hard fuel-cut limiter with hysteresis; combustion re-lights over ~15 ms.
+  if (rpm >= FUELCUT) s.fuelCut = true; else if (s.fuelCut && rpm <= FC_RESUME) s.fuelCut = false;
+  s.comb = s.fuelCut ? 0 : s.comb + (1 - s.comb) * (1 - Math.exp(-h / 0.015));
+  // Idle-speed control: PI on airflow toward 780 rpm (integrator only near idle — no wind-up).
+  const err = SIM_IDLE - rpm;
+  if (err > -300) s.iscI = pwClamp(s.iscI + err * 0.004 * h, -0.05, 0.25);
+  const isc = pwClamp(0.08 + err * 0.0012 + s.iscI, 0, 0.45);
+  // Idle combustion jitter (filtered noise) + the A/C compressor clutching in every ~11 s.
+  s.noise += -s.noise * 10 * h + 22 * Math.sqrt(h) * (pwRand(s) + pwRand(s) + pwRand(s) - 1.5);
+  s.acT = (s.acT + h) % 11;
+  const Tf = pwFric(s.we) + (s.acT > 6.5 ? 5 : 0);
+  // TRC: trims (spark/fuel) torque as soon as the driven wheels outrun the car — the
+  // SLIP telltale is the real car's flashing slip indicator. Off for the burnout.
+  if (s.tcsOn && s.slipV > 1.0) s.tcs = Math.max(0.3, s.tcs - (s.slipV - 1.0) * 4 * h); else s.tcs = Math.min(1, s.tcs + 3 * h);
+  let Te = s.comb * s.tcs * Math.max(pwLoad(s.thrEff, rpm), isc) * (pwTorque(rpm) + Tf) - Tf;
+  if (rpm < 1500) Te += s.noise * pwClamp((1500 - rpm) / 700, 0, 1);
+
+  // Clutch → compliant driveline. Locked: spring-damper torque passes straight
+  // through. Over capacity: the clutch slips at ±cap and the shaft relaxes.
+  let Tc = 0; s.cSlip = false;
+  if (g > 0 && s.clutch > 0.001) {
+    const cap = CLUTCH_CAP * s.clutch, k = PW_KE[g], c = PW_CE[g];
+    const dw = s.we - s.ww * G, Tl = k * s.tw + c * dw;
+    if (Tl <= cap && Tl >= -cap) { Tc = Tl; s.tw += dw * h; }
+    else { Tc = Tl > 0 ? cap : -cap; s.tw = (s.tw + h * Tc / c) / (1 + h * k / c); s.cSlip = Math.abs(dw) > 3; }
+  } else s.tw = 0;
+
+  // Free dynamics: crank, rear axle (losses always oppose the flow of power), aero on the body.
+  s.we += (Te - Tc) / IE * h; if (s.we < 0) s.we = 0;
+  s.ww += Tc * G * (Tc >= 0 ? PW_EFF : 1 / PW_EFF) / IWR * h;
+  s.v -= CDA_K * s.v * s.v / MCAR * h;
+
+  // Contact loads: longitudinal load transfer, friction circle vs lateral g.
+  const Fzr = pwClamp(PW_M * ((1 - WF) * PW_G + s.aFilt * CG_H / WB), 0.2 * PW_M * PW_G, 0.8 * PW_M * PW_G), Fzf = PW_M * PW_G - Fzr;
+  const lat = s.aLat / MU_PK, mu = MU_PK * Math.sqrt(Math.max(0.04, 1 - lat * lat));
+  const muT = s.slide ? mu * (0.72 + 0.28 * Math.exp(-Math.abs(s.slipV) / 2.5)) : mu;
+  const Fb = s.brake * BRAKE_F;
+  const capT = muT * Fzr * h;                                       // tyre impulse cap
+  const capB = Math.min(Fb * (1 - BIAS_F), 0.95 * mu * Fzr) * RW * h; // rear brake (ABS-limited) angular impulse cap
+  const capG = (Math.min(Fb * BIAS_F, mu * Fzf) + PW_M * PW_G * (CRR0 + CRR2 * s.v * s.v)) * h; // front brakes + rolling
+  const mT = 1 / (RW * RW / IWR + 1 / MCAR);
+
+  // Sequential friction impulses (accumulated + clamped, Gauss-Seidel).
+  let Jb = 0, Jg = 0, Jt = 0;
+  for (let it = 0; it < 4; it++) {
+    let d = -s.ww * IWR, n = pwClamp(Jb + d, -capB, capB); d = n - Jb; Jb = n; s.ww += d / IWR;
+    d = -s.v * MCAR; n = pwClamp(Jg + d, -capG, capG); d = n - Jg; Jg = n; s.v += d / MCAR;
+    d = -(s.ww * RW - s.v) * mT; n = pwClamp(Jt + d, -capT, capT); d = n - Jt; Jt = n; s.ww += d * RW / IWR; s.v -= d / MCAR;
+  }
+  if (s.v < 0) s.v = 0; if (s.ww < 0) s.ww = 0;
+  s.slipV = s.ww * RW - s.v; s.slide = Math.abs(s.slipV) > 0.25;
+  s.slipping = s.slide || s.cSlip;
+  if (!Number.isFinite(s.v + s.ww + s.we + s.tw)) { s.v = s.ww = s.tw = 0; s.we = SIM_IDLE * R2A; }
+}
+
+// Driver shift: clutch in + lift → neutral (blip on a downshift) → select →
+// feed the clutch back in. ~0.36 s up, ~0.43 s down (× `lazy`). The rpm drop
+// to the new ratio happens through the clutch, not by fiat.
+function pwShift(s, to, lazy = 1) {
+  if (s.sh || to < 1 || to > 6 || to === s.gear) return;
+  const down = to < s.gear;
+  s.sh = { t: 0, to, down, thr0: s.throttle, T1: (down ? 0.08 : 0.07) * lazy, T2: (down ? 0.17 : 0.09) * lazy, T3: (down ? 0.18 : 0.20) * lazy };
+}
+function pwServiceShift(s, dt, thrAfter) {
+  const sh = s.sh; if (!sh) return false;
+  sh.t += dt;
+  const t = sh.t, rpm = s.we * A2R;
+  if (t < sh.T1) {                                                  // clutch in, lift
+    const p = t / sh.T1; s.clutch = 1 - p; s.throttle = sh.down ? 0 : sh.thr0 * Math.max(0, 1 - 2 * p);
+  } else if (t < sh.T1 + sh.T2) {                                   // across the gate; synchro grabs halfway
+    const p = (t - sh.T1) / sh.T2; s.clutch = 0;
+    if (p < 0.5) s.gear = 0; else if (s.gear !== sh.to) { s.gear = sh.to; s.gearDisp = sh.to; s.gearFlash = 0.12; s.tw = 0; }
+    s.throttle = sh.down ? pwClamp((s.ww * PW_GR[sh.to] * A2R - 250 - rpm) / 1000, 0, 0.9) : 0;   // heel-toe blip to the new gear's revs
+  } else if (t < sh.T1 + sh.T2 + sh.T3) {                           // let the clutch out, roll back on
+    const p = (t - sh.T1 - sh.T2) / sh.T3; s.clutch = p * p * (3 - 2 * p); s.throttle = sh.down ? 0 : thrAfter * pwClamp((p - 0.4) / 0.6, 0, 1);
+  } else { s.clutch = 1; s.sh = null; return false; }
+  return true;
+}
+// Brake pedal for a target deceleration (m/s²): feed-forward minus drag, plus a touch of feedback.
+function pwBrakeFor(s, decel) {
+  const resist = CDA_K * s.v * s.v + PW_M * PW_G * CRR0;
+  return pwClamp((MCAR * decel - resist) / BRAKE_F + 0.04 * (decel + s.aFilt), 0, 1);
+}
+const pwRpmIn = (s, g) => s.ww * PW_GR[g] * A2R;                   // crank rpm the wheels would demand in gear g
+function pwGearFor(kmh, hi = 6500) { for (let g = 1; g <= 6; g++) if ((kmh / 3.6) / RW * PW_GR[g] * A2R <= hi) return g; return 6; }
+// Heel-toe down the box while braking (never below `minG`).
+function pwDownshifts(s, below, minG, lazy) {
+  if (s.gear > minG && s.we * A2R < below && pwRpmIn(s, s.gear - 1) < 6600) pwShift(s, s.gear - 1, lazy);
+}
+
+// Place the car at a speed/gear with everything settled (mode seeds).
+function pwPlace(s, kmh, gear) {
+  s.v = kmh / 3.6; s.ww = s.v / RW; s.prevV = s.v; s.gear = gear; s.gearDisp = gear; s.tw = 0; s.sh = null;
+  s.we = Math.max(SIM_IDLE, gear ? pwRpmIn(s, gear) : SIM_IDLE) * R2A;
+  s.clutch = 1; s.throttle = 0; s.thrEff = 0; s.brake = 0; s.fuelCut = false; s.comb = 1; s.slide = false; s.slipV = 0; s.iscI = 0;
+  s.ph = 0; s.modeT = 0; s.aLong = 0; s.aFilt = 0; s.aLat = 0; s.tcs = 1; s.tcsOn = true;
+}
+
+// Hot-lap circuit (~1.7 km club layout): [length m, radius m (+ right, − left, 0 = straight)].
+// Curvature is smoothed into clothoid-ish transitions; the driver follows a
+// grip-limited corner speed and a 0.82 g braking envelope built backwards from it.
+const TRACK_LAYOUT = [[420, 0], [50, 16], [180, 0], [63, -40], [90, 0], [141, 90], [250, 0], [20, -25], [20, 25], [140, 0], [82, 35], [160, 0], [94, -60]];
+const TRK_MU_LAT = 0.98, TRK_DECEL = 8.0;
+const TRK_N = TRACK_LAYOUT.reduce((a, [l]) => a + l, 0);
+const TRK_K = new Float32Array(TRK_N), TRK_V = new Float32Array(TRK_N);
+(function buildTrack() {
+  let i = 0; for (const [len, r] of TRACK_LAYOUT) for (let m = 0; m < len; m++) TRK_K[i++] = r ? 1 / r : 0;
+  for (let pass = 0; pass < 2; pass++) {                            // ±12 m moving average, twice
+    const src = TRK_K.slice();
+    for (let j = 0; j < TRK_N; j++) { let a = 0; for (let o = -12; o <= 12; o++) a += src[(j + o + TRK_N) % TRK_N]; TRK_K[j] = a / 25; }
+  }
+  for (let j = 0; j < TRK_N; j++) TRK_V[j] = Math.min(75, Math.sqrt(TRK_MU_LAT * PW_G / Math.max(1e-4, Math.abs(TRK_K[j]))));
+  for (let pass = 0; pass < 2; pass++) for (let j = TRK_N - 1; j >= 0; j--) {
+    const nx = TRK_V[(j + 1) % TRK_N]; TRK_V[j] = Math.min(TRK_V[j], Math.sqrt(nx * nx + 2 * TRK_DECEL));
+  }
+})();
 
 // Initial state when a driving mode is selected.
 const SEEDS = {
-  PULL: (s) => { s.v = 40 / 3.6; s.gear = 2; s.clutch = 1; s.wheelspin = false; s._coast = false; s.we = rpmFromV(s.v, s.gear) * R2A; },
-  ENG_BRAKE: (s) => { s.v = 165 / 3.6; s.gear = gearFor(165); s.clutch = 1; s.wheelspin = false; s.modeT = 0; s.we = rpmFromV(s.v, s.gear) * R2A; },
-  LAUNCH: (s) => { s.v = 0; s.gear = 1; s.clutch = 0; s.wheelspin = false; s.launchHold = 0; s._launched = false; s.we = SIM_IDLE * R2A; s.modeT = 0; },
-  TRACK: (s) => { s.v = 55 / 3.6; s.gear = gearFor(55); s.clutch = 1; s.wheelspin = false; s.modeT = 0; s.we = rpmFromV(s.v, s.gear) * R2A; },
-  LIMITER: (s) => { s.v = 0; s.gear = 0; s.clutch = 0; s.we = SIM_IDLE * R2A; s.modeT = 0; },
-  BURNOUT: (s) => { s.v = 0; s.gear = 1; s.clutch = 1; s.wheelspin = true; s.wheelW = 0; s.we = 4200 * R2A; },
-  IDLE: (s) => { s.v = 0; s.gear = 0; s.clutch = 0; s.we = SIM_IDLE * R2A; },
+  PULL: (s) => pwPlace(s, 48, 2),
+  ENG_BRAKE: (s) => pwPlace(s, 165, pwGearFor(165)),
+  LAUNCH: (s) => { pwPlace(s, 0, 1); s.clutch = 0; s.brake = 0.3; },
+  TRACK: (s) => { const k = TRK_V[0] * 3.6; pwPlace(s, k, pwGearFor(k)); s.trackX = 0; },
+  LIMITER: (s) => pwPlace(s, 0, 0),
+  BURNOUT: (s) => { pwPlace(s, 0, 1); s.clutch = 0; s.brake = 0.6; s.tcsOn = false; },   // TRC off
+  IDLE: (s) => pwPlace(s, 0, 0),
 };
 
-// Per-mode "driver": sets throttle/brake/clutch/gear requests only — physics does the rest.
+// Per-mode "driver": only pedals, clutch and gear lever — physics does the rest.
 const DRIVERS = {
-  // Rolling full-throttle pull, banging redline upshifts; lift/coast and repeat.
+  // Rolling flat-out pull from 2nd, banging ~7250 upshifts; lift at 160, brake + heel-toe back to 2nd, repeat.
   PULL(s, dt) {
-    if (serviceShift(s, dt)) return; s.clutch = 1; if (s.gear === 0) s.gear = 2;
-    if (s._coast) { s.throttle = 0; s.brake = 0.05; if (s.v * 3.6 <= 58) { s._coast = false; s.gear = 2; } }
-    else { s.throttle = 1; s.brake = 0; if (dispRpm(s) >= SIM_REDLINE - 25 && s.gear < 6) requestUpshift(s); if (s.v * 3.6 > 150 || s.gear >= 5) s._coast = true; }
+    s.modeT += dt; if (pwServiceShift(s, dt, 1)) return;
+    const rpm = s.we * A2R, k = s.v * 3.6; s.clutch = 1;
+    if (s.ph === 0) {
+      s.brake = 0; s.throttle = 1;
+      if (s.gear < 6 && rpm >= SHIFT_RPM) pwShift(s, s.gear + 1);
+      else if (k >= 160) s.ph = 1;
+    } else {
+      s.throttle = 0; s.brake = pwBrakeFor(s, 5.5);
+      pwDownshifts(s, 3300, 2, 1);
+      if (k <= 48 && s.gear === 2) { s.ph = 0; s.brake = 0; }
+    }
   },
-  // Lift off at speed; firm trail-brake while engine-braking and rev-matched downshifts walk it down to a stop, then loop.
+  // Lift at 165: pure engine braking + drag for 2.5 s, then trail the brakes and heel-toe
+  // down the box; clutch in near walking pace, stop in neutral, loop.
   ENG_BRAKE(s, dt) {
-    s.modeT += dt; if (serviceShift(s, dt)) return; s.throttle = 0; s.clutch = 1;
-    const k = s.v * 3.6; s.brake = k > 22 ? 0.19 : 0.08;
-    if (dispRpm(s) < 3200 && s.gear > 1) requestDownshift(s, k);
-    if (k < 7) SEEDS.ENG_BRAKE(s);
+    s.modeT += dt; if (pwServiceShift(s, dt, 0)) return;
+    const k = s.v * 3.6; s.throttle = 0;
+    if (s.ph === 0) { s.brake = 0; s.clutch = 1; if (s.modeT > 2.5) s.ph = 1; }
+    else if (s.ph === 1) {
+      s.clutch = 1; s.brake = pwBrakeFor(s, 4.0);
+      pwDownshifts(s, 3000, 2, 1.25);
+      if (k < 18) { s.ph = 2; s.modeT = 0; }
+    } else if (s.ph === 2) {
+      s.clutch = Math.max(0, s.clutch - dt / 0.25); if (s.clutch === 0) s.gear = 0;
+      s.brake = pwBrakeFor(s, 3.0);
+      if (s.v < 0.05 && s.gear === 0) { s.ph = 3; s.modeT = 0; s.clutch = 1; }
+    } else { s.brake = 0.2; s.clutch = 1; if (s.modeT > 1.2) SEEDS.ENG_BRAKE(s); }
   },
-  // Stage on the line ~5000 rpm (clutch in), feather it out (engine held in the band), then a clean pull.
+  // Staged in 1st on the brake, ~5000 rpm; bite the clutch to just under the rears' grip and
+  // slip it while the throttle walks the revs down to meet the wheels (~1 s), then flat out
+  // (TRC catches any flare), pull to 125 km/h, brake to a stop, restage.
   LAUNCH(s, dt) {
-    s.modeT += dt; s.brake = 0;
-    if (s.modeT < 1.3) { s.gear = 1; s.clutch = 0; s.launchHold = 0; s._launched = false; s.throttle = s.we * A2R < 5000 ? 0.92 : 0.08; return; }
-    if (!s._launched) { s.gear = 1; s.throttle = 1; if (s.launchHold === 0 && s.clutch >= 0.999) { s._launched = true; } else { s.clutch = 0.5; s.launchHold = 5000; return; } }
-    DRIVERS.PULL(s, dt); if (s.modeT > 22) { SEEDS.LAUNCH(s); s._launched = false; s._coast = false; }
+    s.modeT += dt; if (pwServiceShift(s, dt, 1)) return;
+    const rpm = s.we * A2R, k = s.v * 3.6;
+    if (s.ph === 0) {
+      s.gear = 1; s.clutch = 0; s.brake = 0.3;
+      s.throttle = pwClamp(0.05 + (5000 - rpm) * 0.0003, 0, 1);
+      if (s.modeT > 1.5) { s.ph = 1; s.tLaunch = s.t; s.t100 = 0; }
+    } else if (s.ph === 1 || s.ph === 2) {
+      s.brake = 0;
+      if (s.ph === 1 && !(s.clutch >= 0.45 && !s.cSlip && !s.slide)) {   // slipping: clutch held just under the tyres' limit,
+        const target = Math.max(pwRpmIn(s, 1), 5000 - 1800 * (s.t - s.tLaunch));  // throttle walks the revs down to the wheels
+        s.clutch = pwClamp(s.clutch + dt * (s.slide ? -2 : 1 / 0.3), 0, 0.55);
+        s.throttle = pwClamp(0.6 + (target - rpm) * 0.002, 0.05, 1);
+      } else {                                                      // caught: clutch fully out, flat
+        s.clutch = Math.min(1, s.clutch + dt * 3); s.throttle = 1;
+        if (s.clutch >= 1) s.ph = 2;
+      }
+      if (!s.t100 && k >= 100) s.t100 = s.t - s.tLaunch;
+      if (s.ph === 2 && s.gear < 6 && rpm >= SHIFT_RPM) pwShift(s, s.gear + 1);
+      else if (k >= 125) s.ph = 3;
+    } else if (s.ph === 3) {
+      s.throttle = 0; s.clutch = 1; s.brake = pwBrakeFor(s, 6.5);
+      pwDownshifts(s, 3000, 2, 1);
+      if (k < 16) { s.ph = 4; s.modeT = 0; }
+    } else if (s.ph === 4) {
+      s.throttle = 0; s.clutch = Math.max(0, s.clutch - dt / 0.2); if (s.clutch === 0) s.gear = 0;
+      s.brake = pwBrakeFor(s, 4.0);
+      if (s.v < 0.05 && s.gear === 0 && s.modeT > 1.0) SEEDS.LAUNCH(s);
+    }
   },
-  // Hot lap: chase a speed profile with throttle/brake; gears + lateral g follow.
+  // Hot lap: follow the braking envelope / corner-speed profile; heel-toe on the way in,
+  // squeeze the throttle as the lateral load comes off, back off if the rears step out.
   TRACK(s, dt) {
-    s.modeT = (s.modeT + dt) % 20; if (serviceShift(s, dt)) { s.aLat = along(s.modeT, LAT_PTS); return; } s.clutch = 1;
-    const vt = Math.max(0, along(s.modeT, TRACK_PTS)) / 3.6, e = vt - s.v;
-    if (e > 0.5) { s.throttle = pwClamp(0.8 * e, 0, 1); s.brake = 0; } else if (e < -0.5) { s.throttle = 0; s.brake = pwClamp(-0.45 * e, 0, 1); } else { s.throttle = 0.25; s.brake = 0; }
-    const k = s.v * 3.6;
-    if (s.gear < 6 && dispRpm(s) >= SIM_REDLINE - 60 && e > 0.5) requestUpshift(s);
-    else if (s.gear > 1 && dispRpm(s) < 2600) requestDownshift(s, k);
-    s.aLat = along(s.modeT, LAT_PTS);
+    s.modeT += dt;
+    s.trackX = (s.trackX + s.v * dt) % TRK_N;
+    const i = s.trackX | 0;
+    s.aLat = s.v * s.v * TRK_K[i] / PW_G;
+    if (pwServiceShift(s, dt, 1)) return;
+    const look = (i + Math.round(s.v * 0.35)) % TRK_N;
+    const vt = Math.min(TRK_V[i], TRK_V[look]), e = vt - s.v, rpm = s.we * A2R;
+    s.clutch = 1;
+    if (e < -0.4) {
+      s.throttle = 0; s.brake = pwClamp(pwBrakeFor(s, TRK_DECEL) + 0.12 * (-e - 0.4), 0, 1);
+      pwDownshifts(s, 3800, 2, 1);
+    } else {
+      s.brake = 0;
+      const exitCap = 0.35 + 0.65 * pwClamp(1 - Math.abs(s.aLat) / TRK_MU_LAT, 0, 1) * 2.2;
+      s.throttle = pwClamp(e > 1.5 ? 1 : 0.3 + 0.45 * e, 0, Math.min(1, exitCap)) * (s.slide ? 0.6 : 1);
+      if (s.gear < 6 && rpm >= SHIFT_RPM && s.throttle > 0.8) pwShift(s, s.gear + 1);
+      else if (s.gear > 2 && rpm < 2300) pwShift(s, s.gear - 1);
+    }
   },
-  // Neutral: stab the throttle, bounce off the limiter, fall back to idle, repeat.
+  // Neutral: stab it, bounce off the fuel cut for ~1.2 s, lift, rev-hang back down, repeat.
   LIMITER(s, dt) {
-    s.modeT += dt; s.gear = 0; s.clutch = 0; s.v = 0; s.brake = 0;
-    if (s.fuelCut || s.modeT > 1.6) { s.throttle = 0; if (dispRpm(s) < 1300) s.modeT = 0; } else s.throttle = 1;
+    s.modeT += dt; s.gear = 0; s.clutch = 1; s.brake = 0;
+    if (s.ph === 0) { s.throttle = 1; if (s.modeT > 1.7) { s.ph = 1; s.modeT = 0; } }
+    else { s.throttle = 0; if (s.we * A2R < 1400 && s.modeT > 0.8) { s.ph = 0; s.modeT = 0; } }
   },
-  // Stationary burnout: clutch locked, tyres broken loose — engine pinned at the limiter while the car barely creeps.
-  BURNOUT(s, dt) { s.gear = 1; s.clutch = 1; s.brake = 0.26; s.throttle = 1; if (!s.wheelspin) { s.wheelspin = true; s.wheelW = s.v / RW; } },
-  // Parked, engine idling.
-  IDLE(s, dt) { s.gear = 0; s.clutch = 0; s.throttle = 0; s.brake = 0; },
+  // Brake on, ~5500 rpm, side-step the clutch and stand on it: the rears break loose and
+  // spin up to the limiter while the front brakes hold the car to a crawl. Lift, reset, again.
+  BURNOUT(s, dt) {
+    s.modeT += dt; s.gear = 1;
+    const rpm = s.we * A2R;
+    if (s.ph === 0) {
+      s.clutch = 0; s.brake = 0.6; s.throttle = pwClamp(0.06 + (5500 - rpm) * 0.0003, 0, 1);
+      if (s.modeT > 1.0) { s.ph = 1; s.modeT = 0; }
+    } else if (s.ph === 1) {
+      s.clutch = Math.min(1, s.clutch + dt / 0.12); s.throttle = 1;
+      s.brake = pwClamp(0.42 + (s.v - 0.8) * 0.5, 0.2, 0.7);
+      if (s.modeT > 6.5) { s.ph = 2; s.modeT = 0; }
+    } else {
+      s.throttle = 0; s.clutch = Math.max(0, s.clutch - dt / 0.15); s.brake = 0.5;
+      if (s.modeT > 1.5) SEEDS.BURNOUT(s);
+    }
+  },
+  // Parked in neutral, foot off everything: ISC hunting + combustion jitter + A/C cycling.
+  IDLE(s, dt) { s.gear = 0; s.clutch = 1; s.throttle = 0; s.brake = 0; },
 };
+
+// One fixed 120 Hz tick: driver, then the physics sub-steps.
+function pwTick(s, mode) {
+  s.aLat *= 0.9;                                                    // decays unless TRACK keeps writing it
+  (DRIVERS[mode] || DRIVERS.PULL)(s, FIXED);
+  if (!s.sh) s.gearDisp = s.gear;                                   // mid-shift the indicator holds until the synchro grabs
+  const h = FIXED / SUBSTEPS;
+  for (let i = 0; i < SUBSTEPS; i++) pwPhysics(s, h);
+  const a = (s.v - s.prevV) / FIXED; s.prevV = s.v;
+  s.aFilt += (a - s.aFilt) * (1 - Math.exp(-FIXED / 0.08));         // body pitch lag → load transfer
+  s.aLong = a / PW_G;
+  s.gearFlash = Math.max(0, s.gearFlash - FIXED);
+  s.t += FIXED;
+}
+const dispRpm = (s) => s.we * A2R;                                  // tach: crank speed
+const dispKmh = (s) => s.ww * RW * 3.6;                             // speedo: driven-wheel speed
+
+// Instrument dynamics. Needles are stepper-driven spring-mass systems (2nd order,
+// slightly under-damped, slew-rate limited, hard pegs at both ends) integrated on
+// the same fixed tick; `p` keeps the previous tick for render interpolation.
+function pwMakeView() {
+  return { tach: { x: 135, v: 0, p: 135 }, spd: { x: 135, v: 0, p: 135 }, thr: { x: 0 }, brk: { x: 0 }, clu: { x: 0 }, gx: { x: 0 }, gy: { x: 0 } };
+}
+function pwNeedle(n, target, wn, zeta, maxRate, dt) {
+  n.p = n.x;
+  n.v += (wn * wn * (target - n.x) - 2 * zeta * wn * n.v) * dt;
+  if (n.v > maxRate) n.v = maxRate; else if (n.v < -maxRate) n.v = -maxRate;
+  n.x += n.v * dt;
+  if (n.x < 135) { n.x = 135; if (n.v < 0) n.v = 0; } else if (n.x > 405) { n.x = 405; if (n.v > 0) n.v = 0; }
+}
+// Exact-exponential damper toward a target (input bars, g-meter dot).
+const pwDamp = (n, target, halflife, dt) => { n.x = target + (n.x - target) * Math.exp(-0.6931472 * dt / Math.max(1e-3, halflife)); return n.x; };
+const pwSweep = (val, max) => 135 + 270 * pwClamp(val / max, 0, 1);   // == pwGaugeAngle(val / max)
+function pwViewStep(vw, s, dt) {
+  pwNeedle(vw.tach, pwSweep(dispRpm(s), 9000), 2 * PW_PI * 6.5, 0.72, 800, dt);
+  pwNeedle(vw.spd, pwSweep(dispKmh(s), 260), 2 * PW_PI * 3.5, 0.8, 450, dt);
+  pwDamp(vw.thr, s.throttle, 0.04, dt); pwDamp(vw.brk, s.brake, 0.04, dt); pwDamp(vw.clu, 1 - s.clutch, 0.04, dt);
+  pwDamp(vw.gx, s.aLat, 0.1, dt); pwDamp(vw.gy, s.aLong, 0.1, dt);
+}
+function pwSettleView(vw, s) {                                      // snap instruments to the sim (static pose)
+  vw.tach.x = vw.tach.p = pwSweep(dispRpm(s), 9000); vw.spd.x = vw.spd.p = pwSweep(dispKmh(s), 260); vw.tach.v = vw.spd.v = 0;
+  vw.thr.x = s.throttle; vw.brk.x = s.brake; vw.clu.x = 1 - s.clutch; vw.gx.x = s.aLat; vw.gy.x = s.aLong;
+}
+// </PW-SIM-CORE>
+
+// Run `start` only while `el` is on screen and the tab is visible; `start` returns its own stop().
+// Used to park the sim loop / vibe gauges so they cost nothing when nobody can see them.
+function pwWhileVisible(el, start) {
+  let stop = null, inView = true, shown = !document.hidden, io = null;
+  const sync = () => {
+    const want = inView && shown;
+    if (want && !stop) stop = start() || (() => {});
+    else if (!want && stop) { stop(); stop = null; }
+  };
+  const onVis = () => { shown = !document.hidden; sync(); };
+  document.addEventListener('visibilitychange', onVis);
+  if (el && typeof IntersectionObserver !== 'undefined') {
+    io = new IntersectionObserver((es) => { inView = es[es.length - 1].isIntersecting; sync(); }, { rootMargin: '120px 0px' });
+    io.observe(el);
+  }
+  sync();
+  return () => { document.removeEventListener('visibilitychange', onVis); if (io) io.disconnect(); if (stop) stop(); stop = null; };
+}
 
 function ClusterControls({ mode, setMode }) {
   const modes = [
@@ -381,7 +608,7 @@ function PwGMeter({ gBallRef }) {
   );
 }
 
-// A throttle / brake / clutch input bar (fill width set imperatively).
+// A throttle / brake / clutch input bar (fill scaled imperatively — transform only, no layout).
 function PwInputBar({ label, cls, fillRef }) {
   return (
     <div className={'pw-input pw-input--' + cls}>
@@ -391,82 +618,91 @@ function PwInputBar({ label, cls, fillRef }) {
   );
 }
 
-// Low-rate repaint clock (re-renders ~`fps` times/sec; paused = render once). Used for
-// the decorative vibe gauges so they don't churn React at 60fps like the old code did.
-function useSlowClock(fps, paused) {
-  const [, setT] = useState(0);
-  useEffect(() => {
-    if (paused) return;
-    const id = setInterval(() => setT((v) => v + 1), 1000 / fps);
-    return () => clearInterval(id);
-  }, [fps, paused]);
-}
+// Swap a text node's data in place (textContent would replace the node → extra layout work).
+function pwSetText(el, txt) { const n = el.firstChild; if (n && n.nodeType === 3) n.data = txt; else el.textContent = txt; }
 
-// Decorative "vibe" mini-gauges — slow time-based sines, throttled to ~15fps and frozen
-// under prefers-reduced-motion. Purely ornamental (aria-hidden), isolated from the sim loop.
+const pwReducedMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+// Decorative "vibe" mini-gauges — slow time-based sines, repainted imperatively at ~15fps
+// (no React re-render), parked off screen and frozen under prefers-reduced-motion.
+const VIBE_SPECS = [
+  { label: 'FOCUS',    color: '#7fd4e6', warn: 0.85, val: (ph) => 78 + 12 * Math.sin(ph * 0.48 + 1.4) },
+  { label: 'COFFEE',   color: '#ffc266', warn: 0.2,  val: (ph) => 50 + 30 * Math.sin(ph * 0.36 + 2.0) },
+  { label: 'ALT m·10', color: '#ffc266', warn: 0.95, val: (ph) => (1240 + 90 * Math.sin(ph * 0.30 + 3.0)) / 53 },
+  { label: 'TOK/S',    color: '#7fd4e6', warn: 0.95, val: (ph) => (900 + 240 * Math.sin(ph * 0.66 + 4.0)) / 12 },
+];
 function VibeGauges() {
-  const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  useSlowClock(15, reduce);
-  const ph = reduce ? 6 : performance.now() / 1000;              // seconds; frozen pose when reduced
-  const wave = (f, a, off = 0) => a * Math.sin(ph * f + off);
-  const focus = 78 + wave(0.48, 12, 1.4);
-  const coffee = 50 + wave(0.36, 30, 2.0);
-  const altitude = 1240 + wave(0.30, 90, 3.0);
-  const tokensPerSec = 900 + wave(0.66, 240, 4.0);
+  const host = useRef(null);
+  const live = useRef(VIBE_SPECS.map(() => ({})));
+  const ph0 = useRef(null);
+  if (ph0.current === null) ph0.current = pwReducedMotion() ? 6 : performance.now() / 1000;   // seconds; frozen pose when reduced
+  useEffect(() => {
+    if (pwReducedMotion()) return;
+    const paint = () => {
+      const ph = performance.now() / 1000;
+      VIBE_SPECS.forEach((sp, i) => window.pwMiniGaugeSet(live.current[i], sp.val(ph), 100, 116, sp.color, sp.warn));
+    };
+    return pwWhileVisible(host.current, () => { paint(); const id = setInterval(paint, 1000 / 15); return () => clearInterval(id); });
+  }, []);
   return (
-    <div className="pw-hero__cluster-mini" aria-hidden="true">
-      <window.PWMiniGauge value={focus} max={100} label="FOCUS" size={116} color="#7fd4e6" />
-      <window.PWMiniGauge value={coffee} max={100} label="COFFEE" size={116} color="#ffc266" warn={0.2} />
-      <window.PWMiniGauge value={altitude / 53} max={100} label="ALT m·10" size={116} color="#ffc266" warn={0.95} />
-      <window.PWMiniGauge value={tokensPerSec / 12} max={100} label="TOK/S" size={116} color="#7fd4e6" warn={0.95} />
+    <div className="pw-hero__cluster-mini" aria-hidden="true" ref={host}>
+      {VIBE_SPECS.map((sp, i) => (
+        <window.PWMiniGauge key={sp.label} value={sp.val(ph0.current)} max={100} label={sp.label} size={116} color={sp.color} warn={sp.warn} liveRef={live.current[i]} />
+      ))}
     </div>
   );
 }
 
-// LIVE instrument cluster — runs the physics on a fixed-timestep accumulator inside one
-// rAF loop and writes the needles / LEDs / bars / digits to the DOM imperatively, so the
-// hero never re-renders per frame and the two needles share a single source of truth.
+// LIVE instrument cluster — fixed-timestep physics (120 Hz, clamped catch-up) inside one
+// rAF loop that only runs while the cluster is on screen and the tab is visible. Needles
+// are CSS-rotated compositor layers, bars are scaleX, text is throttled and only written
+// on change — so a frame is a handful of property writes, no React, no layout, no repaint
+// of the dial faces.
 function LiveCluster({ mode }) {
   const sim = useRef(null);
   if (!sim.current) sim.current = makeSim();
+  const view = useRef(null);
+  if (!view.current) view.current = pwMakeView();
   const modeRef = useRef(mode);
 
-  // damper sub-states (analog needle/bar feel)
-  const tachN = useRef({ x: SIM_IDLE }), spdN = useRef({ x: 0 });
-  const dThr = useRef({ x: 0 }), dBrk = useRef({ x: 0 }), dClu = useRef({ x: 0 });
-  const dLat = useRef({ x: 0 }), dLon = useRef({ x: 0 });
-
   // DOM refs
+  const rowRef = useRef(null);
   const tachNeedle = useRef(null), tachGear = useRef(null);
   const spdNeedle = useRef(null), spdDigit = useRef(null);
   const leds = useRef([]);
   const thrBar = useRef(null), brkBar = useRef(null), cluBar = useRef(null);
   const gBall = useRef(null), slipLamp = useRef(null);
+  const shown = useRef({});                                          // last values written to the DOM
 
-  const CXT = 200, CYT = 200;   // tach size 400 → centre 200
-  const CXS = 140, CYS = 140;   // speedo size 280 → centre 140
-  const A = window.pwGaugeAngle;
   const reduceRef = useRef(null);
-  if (reduceRef.current === null) reduceRef.current = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  if (reduceRef.current === null) reduceRef.current = pwReducedMotion();
 
-  // Push the current sim state to the DOM imperatively. `animate` gates the bits
-  // that only make sense while running (limiter strobe + needle jitter); when it's
-  // false (reduced-motion snapshot) the cluster paints a calm static pose.
-  const paint = (s, dt, now, animate) => {
-    const rpm = dispRpm(s), kmh = s.v * 3.6;
-    if (window.__PW_DEBUG) window.__pw = { mode: modeRef.current, rpm, kmh, gear: s.gear, clutch: s.clutch, wheelspin: s.wheelspin, slipping: s.slipping, fuelCut: s.fuelCut, lockErr: (s.gear > 0 && s.clutch >= 0.999 && !s.wheelspin && s.v > 2) ? Math.abs(rpm - rpmFromV(s.v, s.gear)) : 0 };
+  // Push the current sim/instrument state to the DOM. `alpha` interpolates the needles
+  // between physics ticks; `animate` gates the limiter strobe (off for the static pose).
+  const paint = (alpha, now, animate) => {
+    const s = sim.current, vw = view.current, o = shown.current;
+    const rpm = dispRpm(s), kmh = dispKmh(s);
+    if (window.__PW_DEBUG) window.__pw = { mode: modeRef.current, rpm, kmh, carKmh: s.v * 3.6, gear: s.gear, clutch: s.clutch, throttle: s.throttle, brake: s.brake, slide: s.slide, cSlip: s.cSlip, fuelCut: s.fuelCut, aLong: s.aLong, aLat: s.aLat, t100: s.t100, tachDeg: vw.tach.x, spdDeg: vw.spd.x };
 
-    // Needles — asymmetric tach damping (fast rise, slow fall = flat-four rev-hang) + limiter jitter.
-    const tgt = (animate && s.fuelCut) ? rpm - Math.random() * 220 : rpm;
-    const hl = tgt > tachN.current.x ? 0.045 : 0.5;
-    const tA = A(pwClamp(pwDamp(tachN.current, tgt, hl, dt) / 9000, 0, 1));
-    const sA = A(pwClamp(pwDamp(spdN.current, kmh, 0.12, dt) / 260, 0, 1));
-    if (tachNeedle.current) tachNeedle.current.setAttribute('transform', `rotate(${tA.toFixed(2)} ${CXT} ${CYT})`);
-    if (spdNeedle.current) spdNeedle.current.setAttribute('transform', `rotate(${sA.toFixed(2)} ${CXS} ${CYS})`);
+    // Needles — rotate the needle layers (compositor-only).
+    const tA = vw.tach.p + (vw.tach.x - vw.tach.p) * alpha;
+    const sA = vw.spd.p + (vw.spd.x - vw.spd.p) * alpha;
+    const tS = 'rotate(' + tA.toFixed(2) + 'deg)', sS = 'rotate(' + sA.toFixed(2) + 'deg)';
+    if (tS !== o.t && tachNeedle.current) { tachNeedle.current.style.transform = tS; o.t = tS; }
+    if (sS !== o.s && spdNeedle.current) { spdNeedle.current.style.transform = sS; o.s = sS; }
 
-    // Digital readouts + gear (flash white on a shift).
-    if (spdDigit.current) spdDigit.current.textContent = Math.max(0, Math.floor(kmh)).toString().padStart(3, '0');
-    if (tachGear.current) { tachGear.current.textContent = s.gear === 0 ? 'N' : String(s.gear); tachGear.current.setAttribute('fill', s.gearFlash > 0 ? '#ffffff' : '#ffc266'); }
+    // Digital speed — refreshed at ≤15 Hz like a real cluster readout, and only on change.
+    if (!(now - (o.dT || 0) < 66)) {
+      o.dT = now;
+      const d = Math.max(0, Math.floor(kmh)).toString().padStart(3, '0');
+      if (d !== o.d && spdDigit.current) { pwSetText(spdDigit.current, d); o.d = d; }
+    }
+    // Gear digit (flashes white on a shift).
+    const gTxt = s.gearDisp === 0 ? 'N' : String(s.gearDisp), gFill = s.gearFlash > 0 ? '#ffffff' : '#ffc266';
+    if (tachGear.current) {
+      if (gTxt !== o.g) { pwSetText(tachGear.current, gTxt); o.g = gTxt; }
+      if (gFill !== o.gf) { tachGear.current.setAttribute('fill', gFill); o.gf = gFill; }
+    }
 
     // Shift lights. Strobe on the limiter is clamped to ≤2.5 Hz (WCAG 2.3.3) and off in reduced-motion.
     const frac = pwClamp((rpm - 0.6 * SIM_REDLINE) / (SIM_REDLINE - 0.6 * SIM_REDLINE), 0, 1);
@@ -475,24 +711,22 @@ function LiveCluster({ mode }) {
     for (let i = 0; i < PW_NLED; i++) {
       const el = leds.current[i]; if (!el) continue;
       const on = (animate && s.fuelCut) ? strobe : i < lit;
-      const tone = i < 5 ? 'g' : i < 8 ? 'a' : 'r';
-      const cls = 'pw-led' + (on ? ' on pw-led--' + tone : '');
+      const cls = on ? (i < 5 ? 'pw-led on pw-led--g' : i < 8 ? 'pw-led on pw-led--a' : 'pw-led on pw-led--r') : 'pw-led';
       if (el.className !== cls) el.className = cls;
     }
 
     // Input bars (clutch bar shows pedal travel = 1 − engagement).
-    const setBar = (el, ref, val) => { if (el) el.style.width = (pwDamp(ref, val, 0.04, dt) * 100).toFixed(1) + '%'; };
-    setBar(thrBar.current, dThr.current, s.throttle);
-    setBar(brkBar.current, dBrk.current, s.brake);
-    setBar(cluBar.current, dClu.current, 1 - s.clutch);
+    const bar = (el, v, k) => { const t = 'scaleX(' + pwClamp(v, 0, 1).toFixed(3) + ')'; if (el && t !== o[k]) { el.style.transform = t; o[k] = t; } };
+    bar(thrBar.current, vw.thr.x, 'bt'); bar(brkBar.current, vw.brk.x, 'bb'); bar(cluBar.current, vw.clu.x, 'bc');
 
     // g-meter dot (±1.5 g full scale; up = accel, down = brake).
-    const gx = pwClamp(pwDamp(dLat.current, s.aLat, 0.1, dt) / 1.5, -1, 1);
-    const gy = pwClamp(pwDamp(dLon.current, s.aLong, 0.1, dt) / 1.5, -1, 1);
-    if (gBall.current) gBall.current.setAttribute('transform', `translate(${(gx * 32).toFixed(1)} ${(-gy * 32).toFixed(1)})`);
+    const gx = pwClamp(vw.gx.x / 1.5, -1, 1), gy = pwClamp(vw.gy.x / 1.5, -1, 1);
+    const gT = `translate(${(gx * 32).toFixed(1)} ${(-gy * 32).toFixed(1)})`;
+    if (gT !== o.gb && gBall.current) { gBall.current.setAttribute('transform', gT); o.gb = gT; }
 
     // Wheelspin / clutch-slip telltale.
-    if (slipLamp.current) slipLamp.current.style.opacity = s.slipping ? '1' : '0.14';
+    const op = s.slipping ? '1' : '0.14';
+    if (op !== o.sl && slipLamp.current) { slipLamp.current.style.opacity = op; o.sl = op; }
   };
 
   // Reseed on mode change. With reduced-motion, settle to a representative pose and freeze.
@@ -501,36 +735,36 @@ function LiveCluster({ mode }) {
     const s = sim.current;
     if (SEEDS[mode]) SEEDS[mode](s);
     if (reduceRef.current) {
-      const ctrl = DRIVERS[mode] || DRIVERS.PULL;
-      for (let i = 0; i < Math.round(2.2 / FIXED); i++) { ctrl(s, FIXED); pwStep(s, FIXED); }
-      tachN.current.x = dispRpm(s); spdN.current.x = s.v * 3.6;
-      dThr.current.x = s.throttle; dBrk.current.x = s.brake; dClu.current.x = 1 - s.clutch;
-      dLat.current.x = s.aLat; dLon.current.x = s.aLong;
-      paint(s, 0.001, performance.now(), false);
+      for (let i = 0; i < Math.round(2.2 / FIXED); i++) pwTick(s, mode);
+      pwSettleView(view.current, s);
+      paint(1, performance.now(), false);
     }
   }, [mode]);
 
   // The single physics + render loop (skipped entirely for reduced-motion users).
   useEffect(() => {
     if (reduceRef.current) return;
-    let raf, last = performance.now(), acc = 0, alive = true;
-    const frame = (now) => {
-      if (!alive) return;
-      const dt = Math.min((now - last) / 1000, DT_CLAMP); last = now; acc += dt;
-      const s = sim.current, ctrl = DRIVERS[modeRef.current] || DRIVERS.PULL;
-      let guard = 0;
-      while (acc >= FIXED && guard++ < 8) { ctrl(s, FIXED); pwStep(s, FIXED); acc -= FIXED; }
-      paint(s, dt, now, true);
+    return pwWhileVisible(rowRef.current, () => {
+      let raf = 0, last = -1, acc = 0;
+      const frame = (now) => {
+        if (last < 0) last = now;
+        const dt = Math.min((now - last) / 1000, DT_CLAMP); last = now; acc += dt;
+        const s = sim.current, vw = view.current, m = modeRef.current;
+        let n = 0;
+        while (acc >= FIXED && n < MAX_STEPS) { pwTick(s, m); pwViewStep(vw, s, FIXED); acc -= FIXED; n++; }
+        if (n === MAX_STEPS) acc = 0;
+        paint(acc / FIXED, now, true);
+        raf = requestAnimationFrame(frame);
+      };
       raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-    return () => { alive = false; cancelAnimationFrame(raf); };
+      return () => cancelAnimationFrame(raf);
+    });
   }, []);
 
   return (
     <>
       <PwShiftLights ledsRef={leds} />
-      <div className="pw-hero__cluster-row" role="img" aria-label="Live Toyota GT86 instrument cluster — tachometer and speedometer driven by a real-time physics simulation">
+      <div className="pw-hero__cluster-row" ref={rowRef} role="img" aria-label="Live Toyota GT86 instrument cluster — tachometer and speedometer driven by a real-time physics simulation">
         <window.PWSpeedo value={0} max={260} size={280} needleRef={spdNeedle} digitRef={spdDigit} />
         <window.PWTach value={SIM_IDLE} max={9000} redline={7400} size={400} gear={1} needleRef={tachNeedle} gearRef={tachGear} />
         <div className="pw-cluster-side">

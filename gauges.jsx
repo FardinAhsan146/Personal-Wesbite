@@ -46,6 +46,11 @@ function pwGaugeAngle(t) {
 // props: { value (rpm), max (default 9000), redline (default 7000), size, label, gear }
 // needleRef / gearRef let an external rAF loop drive the needle + gear digit
 // imperatively (no CSS transition, no per-frame React re-render).
+// Layering: the dial is one static <svg>; the needle is a second, identically
+// sized <svg> stacked on top and turned with a CSS rotate() about its centre
+// (== the dial centre), and the hub caps it in a third. The needle layer is
+// its own compositor layer, so moving it never repaints the dial (ticks,
+// numerals, gradients) or re-runs the needle's blur filter.
 function PWTach({ value, max = 9000, redline = 7000, size = 360, label = 'RPM × 1000', gear, children, needleRef, gearRef }) {
   const cx = size / 2, cy = size / 2;
   const rim = size / 2 - 4;
@@ -92,156 +97,167 @@ function PWTach({ value, max = 9000, redline = 7000, size = 360, label = 'RPM ×
   const [needleBackX, needleBackY] = pwPolar(cx, cy, -22, 0);
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
-      <defs>
-        <radialGradient id="pw-face" cx="50%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#1a1f27" />
-          <stop offset="70%" stopColor="#0e1116" />
-          <stop offset="100%" stopColor="#070809" />
-        </radialGradient>
-        <radialGradient id="pw-hub" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#3c4250" />
-          <stop offset="50%" stopColor="#1a1f27" />
-          <stop offset="100%" stopColor="#0a0c10" />
-        </radialGradient>
-        <linearGradient id="pw-needle" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#3c4250" />
-          <stop offset="0.7" stopColor="#cfd5dd" />
-          <stop offset="1" stopColor="#ff5a3c" />
-        </linearGradient>
-        <filter id="pw-needle-shadow" x="-10%" y="-10%" width="120%" height="120%">
-          <feGaussianBlur stdDeviation="2" />
-        </filter>
-      </defs>
+    <div className="pw-gauge">
+      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
+        <defs>
+          <radialGradient id="pw-face" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stopColor="#1a1f27" />
+            <stop offset="70%" stopColor="#0e1116" />
+            <stop offset="100%" stopColor="#070809" />
+          </radialGradient>
+        </defs>
 
-      {/* Outer bezel */}
-      <circle cx={cx} cy={cy} r={rim + 3} fill="#0a0c10" stroke="rgba(150,200,220,0.18)" strokeWidth="1" />
-      <circle cx={cx} cy={cy} r={rim} fill="url(#pw-face)" stroke="rgba(150,200,220,0.25)" strokeWidth="0.8" />
+        {/* Outer bezel */}
+        <circle cx={cx} cy={cy} r={rim + 3} fill="#0a0c10" stroke="rgba(150,200,220,0.18)" strokeWidth="1" />
+        <circle cx={cx} cy={cy} r={rim} fill="url(#pw-face)" stroke="rgba(150,200,220,0.25)" strokeWidth="0.8" />
 
-      {/* Inner highlight ring */}
-      <circle cx={cx} cy={cy} r={rim - 4} fill="none" stroke="rgba(150,200,220,0.06)" strokeWidth="0.6" />
+        {/* Inner highlight ring */}
+        <circle cx={cx} cy={cy} r={rim - 4} fill="none" stroke="rgba(150,200,220,0.06)" strokeWidth="0.6" />
 
-      {/* Redline arc band */}
-      <path d={pwArc(cx, cy, rim - 6, redStart, redEnd)} fill="none" stroke="#ff5a3c" strokeWidth="6" opacity="0.85" strokeLinecap="butt" />
-      <path d={pwArc(cx, cy, rim - 6, redStart, redEnd)} fill="none" stroke="rgba(255,90,60,0.35)" strokeWidth="14" opacity="0.6" />
+        {/* Redline arc band */}
+        <path d={pwArc(cx, cy, rim - 6, redStart, redEnd)} fill="none" stroke="#ff5a3c" strokeWidth="6" opacity="0.85" strokeLinecap="butt" />
+        <path d={pwArc(cx, cy, rim - 6, redStart, redEnd)} fill="none" stroke="rgba(255,90,60,0.35)" strokeWidth="14" opacity="0.6" />
 
-      {/* Cyan operating band (low) */}
-      <path d={pwArc(cx, cy, rim - 6, pwGaugeAngle(0.05), redStart)} fill="none" stroke="rgba(127,212,230,0.18)" strokeWidth="2.5" />
+        {/* Cyan operating band (low) */}
+        <path d={pwArc(cx, cy, rim - 6, pwGaugeAngle(0.05), redStart)} fill="none" stroke="rgba(127,212,230,0.18)" strokeWidth="2.5" />
 
-      {/* Tick marks */}
-      {ticks.map((t, i) => (
-        <line key={i}
-          x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-          stroke={t.isRed ? '#ff5a3c' : (t.isMajor ? '#e8eaee' : t.isMinor ? '#9aa3ad' : '#5a6068')}
-          strokeWidth={t.isMajor ? 2 : t.isMinor ? 1.1 : 0.7}
-          strokeLinecap="butt"
-        />
-      ))}
+        {/* Tick marks */}
+        {ticks.map((t, i) => (
+          <line key={i}
+            x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
+            stroke={t.isRed ? '#ff5a3c' : (t.isMajor ? '#e8eaee' : t.isMinor ? '#9aa3ad' : '#5a6068')}
+            strokeWidth={t.isMajor ? 2 : t.isMinor ? 1.1 : 0.7}
+            strokeLinecap="butt"
+          />
+        ))}
 
-      {/* Number labels */}
-      {labels.map((l) => (
-        <text key={l.n}
-          x={l.x} y={l.y}
-          textAnchor="middle" dominantBaseline="central"
-          fontFamily="Space Grotesk, sans-serif"
-          fontWeight="600"
-          fontSize={size * 0.075}
-          fill={l.isRed ? '#ff5a3c' : '#e8eaee'}
-          letterSpacing="-0.02em"
-        >
-          {l.n}
-        </text>
-      ))}
-
-      {/* Centre label "RPM x1000" — sits just below the hub */}
-      <text
-        x={cx} y={cy + rim * 0.22}
-        textAnchor="middle"
-        fontFamily="JetBrains Mono, monospace"
-        fontSize={size * 0.034}
-        fill="#7fd4e6"
-        letterSpacing="0.24em"
-      >{label}</text>
-
-      {/* Brand mark — only visible without a portrait child (portrait sits in this area) */}
-      {!children && (
-        <text
-          x={cx} y={cy - rim * 0.38}
-          textAnchor="middle"
-          fontFamily="Instrument Serif, serif"
-          fontStyle="italic"
-          fontSize={size * 0.052}
-          fill="#7fd4e6"
-          letterSpacing="0.04em"
-        >Fardin Ahsan</text>
-      )}
-
-      {/* Optional child slot (portrait) sits in the upper-mid of the dial
-         so it doesn't conflict with the centre hub or the upper number
-         labels. The gear digit goes BELOW centre. */}
-      {children && (
-        <foreignObject
-          x={cx - rim * 0.28}
-          y={cy - rim * 0.62}
-          width={rim * 0.56}
-          height={rim * 0.5}
-        >
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-            {children}
-          </div>
-        </foreignObject>
-      )}
-
-      {/* GEAR digit — always rendered (when prop set), positioned in the
-         lower face of the dial, below the centre hub and well clear of the
-         corner number labels (0 / redline). */}
-      {gear !== undefined && (
-        <>
-          <text
-            x={cx} y={cy + rim * 0.42}
-            textAnchor="middle" dominantBaseline="central"
-            fontFamily="JetBrains Mono, monospace"
-            fontSize={size * 0.038}
-            fill="#9aa3ad"
-            letterSpacing="0.28em"
-          >GEAR</text>
-          <text
-            ref={gearRef}
-            x={cx} y={cy + rim * 0.58}
+        {/* Number labels */}
+        {labels.map((l) => (
+          <text key={l.n}
+            x={l.x} y={l.y}
             textAnchor="middle" dominantBaseline="central"
             fontFamily="Space Grotesk, sans-serif"
-            fontWeight="700"
-            fontSize={size * 0.14}
-            fill="#ffc266"
-            letterSpacing="-0.05em"
-          >{gear}</text>
-        </>
-      )}
+            fontWeight="600"
+            fontSize={size * 0.075}
+            fill={l.isRed ? '#ff5a3c' : '#e8eaee'}
+            letterSpacing="-0.02em"
+          >
+            {l.n}
+          </text>
+        ))}
 
-      {/* Needle — driven imperatively via needleRef (transform-box-proof 3-arg rotate, no transition) */}
-      <g ref={needleRef} transform={`rotate(${angle} ${cx} ${cy})`} style={{ willChange: 'transform' }}>
-        {/* Shadow */}
-        <polygon
-          points={`${needleBackX},${needleBackY - 2} ${cx},${cy - 6} ${needleTipX},${needleTipY} ${cx},${cy + 6} ${needleBackX},${needleBackY + 2}`}
-          fill="rgba(0,0,0,0.55)" filter="url(#pw-needle-shadow)" transform="translate(2,2)"
-        />
-        {/* Body */}
-        <polygon
-          points={`${needleBackX},${needleBackY - 2} ${cx},${cy - 5} ${needleTipX},${needleTipY} ${cx},${cy + 5} ${needleBackX},${needleBackY + 2}`}
-          fill="url(#pw-needle)"
-          stroke="rgba(0,0,0,0.5)" strokeWidth="0.5"
-        />
-        {/* Red tip emphasis */}
-        <polygon
-          points={`${needleTipX - 18},${needleTipY - 3} ${needleTipX},${needleTipY} ${needleTipX - 18},${needleTipY + 3}`}
-          fill="#ff5a3c"
-        />
-      </g>
+        {/* Centre label "RPM x1000" — sits just below the hub */}
+        <text
+          x={cx} y={cy + rim * 0.22}
+          textAnchor="middle"
+          fontFamily="JetBrains Mono, monospace"
+          fontSize={size * 0.034}
+          fill="#7fd4e6"
+          letterSpacing="0.24em"
+        >{label}</text>
 
-      {/* Center hub */}
-      <circle cx={cx} cy={cy} r={size * 0.05} fill="url(#pw-hub)" stroke="rgba(150,200,220,0.4)" strokeWidth="1" />
-      <circle cx={cx} cy={cy} r={size * 0.018} fill="#0a0c10" stroke="rgba(150,200,220,0.5)" strokeWidth="0.6" />
-    </svg>
+        {/* Brand mark — only visible without a portrait child (portrait sits in this area) */}
+        {!children && (
+          <text
+            x={cx} y={cy - rim * 0.38}
+            textAnchor="middle"
+            fontFamily="Instrument Serif, serif"
+            fontStyle="italic"
+            fontSize={size * 0.052}
+            fill="#7fd4e6"
+            letterSpacing="0.04em"
+          >Fardin Ahsan</text>
+        )}
+
+        {/* Optional child slot (portrait) sits in the upper-mid of the dial
+           so it doesn't conflict with the centre hub or the upper number
+           labels. The gear digit goes BELOW centre. */}
+        {children && (
+          <foreignObject
+            x={cx - rim * 0.28}
+            y={cy - rim * 0.62}
+            width={rim * 0.56}
+            height={rim * 0.5}
+          >
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              {children}
+            </div>
+          </foreignObject>
+        )}
+
+        {/* GEAR digit — always rendered (when prop set), positioned in the
+           lower face of the dial, below the centre hub and well clear of the
+           corner number labels (0 / redline). */}
+        {gear !== undefined && (
+          <>
+            <text
+              x={cx} y={cy + rim * 0.42}
+              textAnchor="middle" dominantBaseline="central"
+              fontFamily="JetBrains Mono, monospace"
+              fontSize={size * 0.038}
+              fill="#9aa3ad"
+              letterSpacing="0.28em"
+            >GEAR</text>
+            <text
+              ref={gearRef}
+              x={cx} y={cy + rim * 0.58}
+              textAnchor="middle" dominantBaseline="central"
+              fontFamily="Space Grotesk, sans-serif"
+              fontWeight="700"
+              fontSize={size * 0.14}
+              fill="#ffc266"
+              letterSpacing="-0.05em"
+            >{gear}</text>
+          </>
+        )}
+
+      </svg>
+
+      {/* Needle layer — drawn pointing at 0° and turned by CSS rotate() (needleRef, no transition) */}
+      <svg className="pw-gauge__layer pw-gauge__needle" ref={needleRef} viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ transform: `rotate(${angle}deg)` }} aria-hidden="true">
+        <defs>
+          <linearGradient id="pw-needle" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#3c4250" />
+            <stop offset="0.7" stopColor="#cfd5dd" />
+            <stop offset="1" stopColor="#ff5a3c" />
+          </linearGradient>
+          <filter id="pw-needle-shadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="2" />
+          </filter>
+        </defs>
+        <g>
+          {/* Shadow */}
+          <polygon
+            points={`${needleBackX},${needleBackY - 2} ${cx},${cy - 6} ${needleTipX},${needleTipY} ${cx},${cy + 6} ${needleBackX},${needleBackY + 2}`}
+            fill="rgba(0,0,0,0.55)" filter="url(#pw-needle-shadow)" transform="translate(2,2)"
+          />
+          {/* Body */}
+          <polygon
+            points={`${needleBackX},${needleBackY - 2} ${cx},${cy - 5} ${needleTipX},${needleTipY} ${cx},${cy + 5} ${needleBackX},${needleBackY + 2}`}
+            fill="url(#pw-needle)"
+            stroke="rgba(0,0,0,0.5)" strokeWidth="0.5"
+          />
+          {/* Red tip emphasis */}
+          <polygon
+            points={`${needleTipX - 18},${needleTipY - 3} ${needleTipX},${needleTipY} ${needleTipX - 18},${needleTipY + 3}`}
+            fill="#ff5a3c"
+          />
+        </g>
+      </svg>
+
+      {/* Center hub — static, above the needle */}
+      <svg className="pw-gauge__layer" viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden="true">
+        <defs>
+          <radialGradient id="pw-hub" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#3c4250" />
+            <stop offset="50%" stopColor="#1a1f27" />
+            <stop offset="100%" stopColor="#0a0c10" />
+          </radialGradient>
+        </defs>
+        <circle cx={cx} cy={cy} r={size * 0.05} fill="url(#pw-hub)" stroke="rgba(150,200,220,0.4)" strokeWidth="1" />
+        <circle cx={cx} cy={cy} r={size * 0.018} fill="#0a0c10" stroke="rgba(150,200,220,0.5)" strokeWidth="0.6" />
+      </svg>
+    </div>
   );
 }
 
@@ -282,100 +298,128 @@ function PWSpeedo({ value, max = 260, size = 260, label = 'KM/H', units = 'kph',
   const [needleBackX, needleBackY] = pwPolar(cx, cy, -16, 0);
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
-      <defs>
-        <radialGradient id="pw-face-s" cx="50%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#1a1f27" />
-          <stop offset="70%" stopColor="#0e1116" />
-          <stop offset="100%" stopColor="#070809" />
-        </radialGradient>
-      </defs>
+    <div className="pw-gauge">
+      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
+        <defs>
+          <radialGradient id="pw-face-s" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stopColor="#1a1f27" />
+            <stop offset="70%" stopColor="#0e1116" />
+            <stop offset="100%" stopColor="#070809" />
+          </radialGradient>
+        </defs>
 
-      <circle cx={cx} cy={cy} r={rim + 3} fill="#0a0c10" stroke="rgba(150,200,220,0.18)" strokeWidth="1" />
-      <circle cx={cx} cy={cy} r={rim} fill="url(#pw-face-s)" stroke="rgba(150,200,220,0.25)" strokeWidth="0.8" />
+        <circle cx={cx} cy={cy} r={rim + 3} fill="#0a0c10" stroke="rgba(150,200,220,0.18)" strokeWidth="1" />
+        <circle cx={cx} cy={cy} r={rim} fill="url(#pw-face-s)" stroke="rgba(150,200,220,0.25)" strokeWidth="0.8" />
 
-      {/* Amber operating band */}
-      <path d={pwArc(cx, cy, rim - 5, pwGaugeAngle(0.05), pwGaugeAngle(0.95))} fill="none" stroke="rgba(255,194,102,0.18)" strokeWidth="2.5" />
+        {/* Amber operating band */}
+        <path d={pwArc(cx, cy, rim - 5, pwGaugeAngle(0.05), pwGaugeAngle(0.95))} fill="none" stroke="rgba(255,194,102,0.18)" strokeWidth="2.5" />
 
-      {ticks.map((t, i) => (
-        <line key={i}
-          x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-          stroke={t.isMajor ? '#e8eaee' : '#7a8088'}
-          strokeWidth={t.isMajor ? 1.6 : 0.7}
-        />
-      ))}
+        {ticks.map((t, i) => (
+          <line key={i}
+            x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
+            stroke={t.isMajor ? '#e8eaee' : '#7a8088'}
+            strokeWidth={t.isMajor ? 1.6 : 0.7}
+          />
+        ))}
 
-      {labels.map((l) => (
-        <text key={l.n}
-          x={l.x} y={l.y}
-          textAnchor="middle" dominantBaseline="central"
-          fontFamily="Space Grotesk, sans-serif"
-          fontWeight="600"
-          fontSize={size * 0.072}
-          fill="#e8eaee"
-          letterSpacing="-0.02em"
-        >{l.n}</text>
-      ))}
+        {labels.map((l) => (
+          <text key={l.n}
+            x={l.x} y={l.y}
+            textAnchor="middle" dominantBaseline="central"
+            fontFamily="Space Grotesk, sans-serif"
+            fontWeight="600"
+            fontSize={size * 0.072}
+            fill="#e8eaee"
+            letterSpacing="-0.02em"
+          >{l.n}</text>
+        ))}
 
-      <text x={cx} y={cy + rim * 0.45}
-        textAnchor="middle"
-        fontFamily="JetBrains Mono, monospace"
-        fontSize={size * 0.045}
-        fill="#ffc266" letterSpacing="0.24em"
-      >{label}</text>
-
-      {gear !== undefined ? null : (
-        <text x={cx} y={cy - rim * 0.34}
+        <text x={cx} y={cy + rim * 0.45}
           textAnchor="middle"
-          fontFamily="Instrument Serif, serif" fontStyle="italic"
-          fontSize={size * 0.065}
-          fill="#ffc266" letterSpacing="0.04em"
-        >velocity</text>
-      )}
+          fontFamily="JetBrains Mono, monospace"
+          fontSize={size * 0.045}
+          fill="#ffc266" letterSpacing="0.24em"
+        >{label}</text>
 
-      {/* Digital readout — small, well below centre, narrower than the inner
-         arc band so side numbers never touch its edges. */}
-      <text x={cx} y={cy + rim * 0.62}
-        textAnchor="middle" dominantBaseline="central"
-        fontFamily="JetBrains Mono, monospace" fontWeight="600"
-        fontSize={size * 0.05}
-        fill="#9aa3ad"
-        letterSpacing="0.18em"
-      >SPD</text>
-      <text ref={digitRef} x={cx} y={cy + rim * 0.74}
-        textAnchor="middle" dominantBaseline="central"
-        fontFamily="JetBrains Mono, monospace" fontWeight="600"
-        fontSize={size * 0.09}
-        fill="#ffc266"
-        letterSpacing="-0.02em"
-      >{Math.floor(value).toString().padStart(3, '0')}</text>
+        {gear !== undefined ? null : (
+          <text x={cx} y={cy - rim * 0.34}
+            textAnchor="middle"
+            fontFamily="Instrument Serif, serif" fontStyle="italic"
+            fontSize={size * 0.065}
+            fill="#ffc266" letterSpacing="0.04em"
+          >velocity</text>
+        )}
 
-      {/* Needle — driven imperatively via needleRef (transform-box-proof, no transition) */}
-      <g ref={needleRef} transform={`rotate(${angle} ${cx} ${cy})`} style={{ willChange: 'transform' }}>
-        <polygon
-          points={`${needleBackX},${needleBackY - 1.5} ${cx},${cy - 4} ${needleTipX},${needleTipY} ${cx},${cy + 4} ${needleBackX},${needleBackY + 1.5}`}
-          fill="#cfd5dd" stroke="rgba(0,0,0,0.4)" strokeWidth="0.4"
-        />
-        <polygon
-          points={`${needleTipX - 14},${needleTipY - 2.4} ${needleTipX},${needleTipY} ${needleTipX - 14},${needleTipY + 2.4}`}
+        {/* Digital readout — small, well below centre, narrower than the inner
+           arc band so side numbers never touch its edges. */}
+        <text x={cx} y={cy + rim * 0.62}
+          textAnchor="middle" dominantBaseline="central"
+          fontFamily="JetBrains Mono, monospace" fontWeight="600"
+          fontSize={size * 0.05}
+          fill="#9aa3ad"
+          letterSpacing="0.18em"
+        >SPD</text>
+        <text ref={digitRef} x={cx} y={cy + rim * 0.74}
+          textAnchor="middle" dominantBaseline="central"
+          fontFamily="JetBrains Mono, monospace" fontWeight="600"
+          fontSize={size * 0.09}
           fill="#ffc266"
-        />
-      </g>
+          letterSpacing="-0.02em"
+        >{Math.floor(value).toString().padStart(3, '0')}</text>
 
-      <circle cx={cx} cy={cy} r={size * 0.05} fill="url(#pw-hub)" stroke="rgba(150,200,220,0.4)" strokeWidth="1" />
-      <circle cx={cx} cy={cy} r={size * 0.018} fill="#0a0c10" stroke="rgba(150,200,220,0.5)" strokeWidth="0.6" />
-    </svg>
+      </svg>
+
+      {/* Needle layer — same scheme as the tach (CSS rotate via needleRef, own compositor layer) */}
+      <svg className="pw-gauge__layer pw-gauge__needle" ref={needleRef} viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ transform: `rotate(${angle}deg)` }} aria-hidden="true">
+        <g>
+          <polygon
+            points={`${needleBackX},${needleBackY - 1.5} ${cx},${cy - 4} ${needleTipX},${needleTipY} ${cx},${cy + 4} ${needleBackX},${needleBackY + 1.5}`}
+            fill="#cfd5dd" stroke="rgba(0,0,0,0.4)" strokeWidth="0.4"
+          />
+          <polygon
+            points={`${needleTipX - 14},${needleTipY - 2.4} ${needleTipX},${needleTipY} ${needleTipX - 14},${needleTipY + 2.4}`}
+            fill="#ffc266"
+          />
+        </g>
+      </svg>
+
+      {/* Center hub (gradient #pw-hub lives in the tach's hub layer) */}
+      <svg className="pw-gauge__layer" viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden="true">
+        <circle cx={cx} cy={cy} r={size * 0.05} fill="url(#pw-hub)" stroke="rgba(150,200,220,0.4)" strokeWidth="1" />
+        <circle cx={cx} cy={cy} r={size * 0.018} fill="#0a0c10" stroke="rgba(150,200,220,0.5)" strokeWidth="0.6" />
+      </svg>
+    </div>
   );
 }
 
 // ----- MiniGauge (small bar-arc for fuel, temp, etc) -----
-function PWMiniGauge({ value, max = 100, label = 'FUEL', size = 140, color = '#7fd4e6', warn = 0.85 }) {
+// Value-dependent bits (arc path, colours, readout) in one place so React and the
+// imperative updater below can never disagree.
+function pwMiniParts(value, max, size, color, warn) {
+  const cx = size / 2, cy = size / 2, rim = size / 2 - 4;
+  const t = Math.max(0, Math.min(1, value / max));
+  const hi = t > warn;
+  return { d: pwArc(cx, cy, rim - 8, 135, 135 + t * 270), stroke: hi ? '#ff5a3c' : color, numFill: hi ? '#ff5a3c' : '#e8eaee', num: String(Math.floor(value)) };
+}
+// Repaint a mounted MiniGauge without React (liveRef = the object passed as its `liveRef` prop).
+// Only touches attributes that actually changed.
+function pwMiniGaugeSet(live, value, max, size, color, warn) {
+  const p = pwMiniParts(value, max, size, color, warn), o = live.last || (live.last = {});
+  if (live.arc) {
+    if (p.d !== o.d) { live.arc.setAttribute('d', p.d); o.d = p.d; }
+    if (p.stroke !== o.stroke) { live.arc.setAttribute('stroke', p.stroke); o.stroke = p.stroke; }
+  }
+  if (live.num) {
+    if (p.num !== o.num) { const n = live.num.firstChild; if (n && n.nodeType === 3) n.data = p.num; else live.num.textContent = p.num; o.num = p.num; }
+    if (p.numFill !== o.numFill) { live.num.setAttribute('fill', p.numFill); o.numFill = p.numFill; }
+  }
+}
+
+function PWMiniGauge({ value, max = 100, label = 'FUEL', size = 140, color = '#7fd4e6', warn = 0.85, liveRef }) {
   const cx = size / 2, cy = size / 2;
   const rim = size / 2 - 4;
-  const t = Math.max(0, Math.min(1, value / max));
   const startAng = 135, endAng = 405;
-  const valAng = startAng + t * (endAng - startAng);
-  const hi = t > warn;
+  const p = pwMiniParts(value, max, size, color, warn);
 
   return (
     <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
@@ -383,7 +427,7 @@ function PWMiniGauge({ value, max = 100, label = 'FUEL', size = 140, color = '#7
       {/* Track */}
       <path d={pwArc(cx, cy, rim - 8, startAng, endAng)} fill="none" stroke="rgba(150,200,220,0.18)" strokeWidth="3" strokeLinecap="round" />
       {/* Value arc */}
-      <path d={pwArc(cx, cy, rim - 8, startAng, valAng)} fill="none" stroke={hi ? '#ff5a3c' : color} strokeWidth="3" strokeLinecap="round" />
+      <path ref={liveRef && ((el) => { liveRef.arc = el; })} d={p.d} fill="none" stroke={p.stroke} strokeWidth="3" strokeLinecap="round" />
       {/* Major ticks every quarter */}
       {[0, 0.25, 0.5, 0.75, 1].map((tt, i) => {
         const a = startAng + tt * (endAng - startAng);
@@ -391,10 +435,10 @@ function PWMiniGauge({ value, max = 100, label = 'FUEL', size = 140, color = '#7
         const [x2, y2] = pwPolar(cx, cy, rim - 4, a);
         return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#9aa3ad" strokeWidth="1" />;
       })}
-      <text x={cx} y={cy - size * 0.08} textAnchor="middle" dominantBaseline="central"
+      <text ref={liveRef && ((el) => { liveRef.num = el; })} x={cx} y={cy - size * 0.08} textAnchor="middle" dominantBaseline="central"
         fontFamily="Space Grotesk, sans-serif" fontWeight="700"
-        fontSize={size * 0.22} fill={hi ? '#ff5a3c' : '#e8eaee'} letterSpacing="-0.03em"
-      >{Math.floor(value)}</text>
+        fontSize={size * 0.22} fill={p.numFill} letterSpacing="-0.03em"
+      >{p.num}</text>
       <text x={cx} y={cy + size * 0.08} textAnchor="middle"
         fontFamily="JetBrains Mono, monospace"
         fontSize={size * 0.085} fill="#9aa3ad" letterSpacing="0.18em"
@@ -422,4 +466,4 @@ function PWBar({ value, max = 100, label, color = '#7fd4e6', sub }) {
   );
 }
 
-Object.assign(window, { PWTach, PWSpeedo, PWMiniGauge, PWBar, pwGaugeAngle, pwPolar });
+Object.assign(window, { PWTach, PWSpeedo, PWMiniGauge, PWBar, pwGaugeAngle, pwPolar, pwMiniGaugeSet });
