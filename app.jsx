@@ -651,7 +651,7 @@ function PwHero() {
 
           <div className="pw-hero__cta">
             <a className="pw-btn pw-btn--filled" href="#open-channel">Contact Me ↻</a>
-            <a className="pw-btn pw-btn--amber" href="https://drive.google.com/file/d/1VgJazP-inmgGJ2-50vjpXC6q1bUrzupK/view?usp=sharing" target="_blank" rel="noreferrer">Resume ↗</a>
+            <a className="pw-btn pw-btn--amber" href="https://drive.google.com/file/d/1nGedBRvMLPSu1lprjSkhVvi-l9h_rz3Y/view?usp=sharing" target="_blank" rel="noreferrer">Resume ↗</a>
           </div>
         </div>
 
@@ -694,7 +694,7 @@ function PwTicker() {
     ['fab fa-whatsapp', '+971 50 146 8233', 'https://wa.me/971501468233'],
     ['fab fa-telegram-plane', '@flipperzunderthehood', 'https://t.me/flipperzunderthehood'],
     ['fas fa-calendar-alt', 'book a 30-min call', 'https://calendly.com/fardinahsan146/30min'],
-    ['fas fa-file-alt', 'résumé / CV', 'https://drive.google.com/file/d/1VgJazP-inmgGJ2-50vjpXC6q1bUrzupK/view?usp=sharing'],
+    ['fas fa-file-alt', 'résumé / CV', 'https://drive.google.com/file/d/1nGedBRvMLPSu1lprjSkhVvi-l9h_rz3Y/view?usp=sharing'],
   ];
   return (
     <div className="pw-ticker">
@@ -979,7 +979,7 @@ function PwOpenChannel() {
     ['05', 'Calendly',  'fas fa-calendar-alt',   'free 30-min call',            'https://calendly.com/fardinahsan146/30min'],
     ['06', 'WhatsApp',  'fab fa-whatsapp',       '+971 50 146 8233',            'https://wa.me/971501468233'],
     ['07', 'Telegram',  'fab fa-telegram-plane', '@flipperzunderthehood',       'https://t.me/flipperzunderthehood'],
-    ['08', 'Resume',    'fas fa-file-alt',       'view PDF ↗',                  'https://drive.google.com/file/d/1VgJazP-inmgGJ2-50vjpXC6q1bUrzupK/view?usp=sharing'],
+    ['08', 'Resume',    'fas fa-file-alt',       'view PDF ↗',                  'https://drive.google.com/file/d/1nGedBRvMLPSu1lprjSkhVvi-l9h_rz3Y/view?usp=sharing'],
   ];
 
   return (
