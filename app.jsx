@@ -812,6 +812,10 @@ function PwHero() {
     { ts: '18:30:09', tag: 'MTN_', cls: 'pw-log__tag--mtn', msg: 'fuji rev. ‘25 · 11 summits logged' },
   ];
 
+  // Age in years, floored to one decimal so it never reads 29.0 before the birthday.
+  const ageYrs = Math.floor((Date.now() - Date.UTC(1997, 11, 1)) / (365.2425 * 864e5) * 10) / 10;
+  const [ageInt, ageDec] = ageYrs.toFixed(1).split('.');
+
   return (
     <section id="top" className="pw-hero">
       <div className="pw-hero__grid">
@@ -820,7 +824,7 @@ function PwHero() {
           <div className="pw-panel pw-panel--cyan">
             <div className="pw-panel__head"><span>TIME-IN-SEAT</span></div>
             <div style={{ padding: '16px', fontFamily: 'JetBrains Mono, monospace' }}>
-              <div style={{ fontSize: 48, color: '#e8eaee', letterSpacing: '-0.03em', lineHeight: 1 }}>28<span style={{ fontSize: 22, color: '#7fd4e6', marginLeft: 2 }}>.4</span><span style={{ fontSize: 14, color: '#6a737d', marginLeft: 8, letterSpacing: '0.14em' }}>YRS</span></div>
+              <div style={{ fontSize: 48, color: '#e8eaee', letterSpacing: '-0.03em', lineHeight: 1 }}>{ageInt}<span style={{ fontSize: 22, color: '#7fd4e6', marginLeft: 2 }}>.{ageDec}</span><span style={{ fontSize: 14, color: '#6a737d', marginLeft: 8, letterSpacing: '0.14em' }}>YRS</span></div>
               <div style={{ fontSize: 11, color: '#6a737d', letterSpacing: '0.16em', marginTop: 8 }}>BORN 01.12.1997 · DUBAI</div>
             </div>
           </div>
